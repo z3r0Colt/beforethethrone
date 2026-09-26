@@ -1,0 +1,24 @@
+{
+  "id": "./",
+  "name": "Before the Throne",
+  "short_name": "Prayer",
+  "description": "A prayer companion for Reformed Presbyterians. Pray by the pattern Christ gave, keep your requests before the Lord, and remember how he has helped.",
+  "lang": "en",
+  "dir": "ltr",
+  "start_url": "./#/today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1e6",
+  "theme_color": "#f6f1e6",
+  "categories": ["lifestyle", "books", "education"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Pray now", "short_name": "Pray", "url": "./#/pray", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
+    { "name": "Add a prayer request", "short_name": "Add request", "url": "./#/requests/new", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+  ]
+}
