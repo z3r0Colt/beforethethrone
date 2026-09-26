@@ -213,6 +213,13 @@ export function toast(message, { action, timeout } = {}) {
 
 // ---------- sheets and dialogs ----------
 
+const openSheets = new Set();
+
+// Closes every open sheet, as when the route changes underneath them.
+export function closeAllSheets() {
+  for (const close of [...openSheets]) close();
+}
+
 // Opens a bottom sheet built on <dialog>. body is a Node or a function that
 // receives the body element. actions: [{ label, variant, onClick(close), autofocus, type }]
 export function openSheet({ title, body, actions = [], onClose, className } = {}) {
@@ -224,6 +231,7 @@ export function openSheet({ title, body, actions = [], onClose, className } = {}
   const close = (result) => {
     if (closed) return;
     closed = true;
+    openSheets.delete(close);
     if (dialog.open) dialog.close();
     dialog.remove();
     if (previouslyFocused && typeof previouslyFocused.focus === 'function') previouslyFocused.focus();
@@ -250,6 +258,7 @@ export function openSheet({ title, body, actions = [], onClose, className } = {}
   dialog.addEventListener('click', (e) => { if (e.target === dialog) close(); });
   document.body.appendChild(dialog);
   dialog.showModal();
+  openSheets.add(close);
   return { close, dialog, body: bodyEl };
 }
 
@@ -260,8 +269,10 @@ export function confirmDialog({ title = 'Are you sure?', message = '', confirmLa
       body: message ? h('p', null, message) : null,
       onClose: (result) => resolve(result === true),
       actions: [
-        { label: cancelLabel, variant: 'ghost', onClick: (close) => close(false) },
-        { label: confirmLabel, variant: danger ? 'danger' : 'primary', autofocus: true, onClick: (close) => close(true) },
+        // For destructive actions the safe choice takes focus, so a stray
+        // Enter never deletes anything.
+        { label: cancelLabel, variant: 'ghost', autofocus: danger, onClick: (close) => close(false) },
+        { label: confirmLabel, variant: danger ? 'danger' : 'primary', autofocus: !danger, onClick: (close) => close(true) },
       ],
     });
   });
@@ -279,6 +290,17 @@ export function downloadFile(filename, text, mime = 'text/plain') {
 }
 
 // ---------- forms ----------
+
+// Grows a textarea to fit its content. Returns a function that re-measures.
+export function autosize(textarea, { min = 0 } = {}) {
+  const fit = () => {
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.max(min, textarea.scrollHeight + 2)}px`;
+  };
+  textarea.addEventListener('input', fit);
+  requestAnimationFrame(fit);
+  return fit;
+}
 
 let fieldSeq = 0;
 // field('Title', h('input', {...}), { hint }) wires up the label and hint ids.

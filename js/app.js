@@ -3,7 +3,7 @@
 
 import { defineRoutes, start, render as rerender } from './router.js';
 import { getState, subscribe, reload, STORAGE_KEY } from './store.js';
-import { icon, toast } from './dom.js';
+import { icon, toast, closeAllSheets } from './dom.js';
 import { initInstall } from './install.js';
 import { APP_VERSION } from './version.js';
 
@@ -67,6 +67,7 @@ function fillIcons() {
 }
 
 function onRoute({ route }) {
+  closeAllSheets();
   document.body.classList.toggle('focus-mode', !!route.focus);
   document.querySelectorAll('[data-nav]').forEach((a) => {
     if (a.dataset.nav === route.tab) a.setAttribute('aria-current', 'page');
@@ -127,6 +128,7 @@ function registerServiceWorker() {
   };
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then((reg) => {
+      if (!reg) return;
       if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
       reg.addEventListener('updatefound', () => {
         const worker = reg.installing;

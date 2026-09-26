@@ -534,9 +534,24 @@ export function replaceState(next) {
   return state;
 }
 
+// Keys the app keeps besides the main state: drafts, view preferences, and
+// saved prayer progress. Erasing everything removes these too.
+const APP_KEY_PREFIXES = ['btt:', 'beforethethrone:'];
+
+function removeAppKeys(store) {
+  if (!store) return;
+  try {
+    const keys = [];
+    for (let i = 0; i < (store.length || 0); i++) keys.push(store.key(i));
+    keys.filter((k) => k && APP_KEY_PREFIXES.some((p) => k.startsWith(p))).forEach((k) => store.removeItem(k));
+  } catch { /* ignore */ }
+}
+
 export function resetAll() {
   state = defaultState();
   try { if (storage) storage.removeItem(STORAGE_KEY); } catch { /* ignore */ }
+  removeAppKeys(storage);
+  try { removeAppKeys(globalThis.sessionStorage); } catch { /* ignore */ }
   persist();
   notify();
   return state;

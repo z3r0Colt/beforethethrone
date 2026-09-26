@@ -30,7 +30,10 @@ for (const theme of ['light', 'dark']) {
     }, theme);
     for (const route of ROUTES) {
       await page.goto(`/${route}`);
-      await expect(page.locator('main h1').first(), route).toBeVisible();
+      const path = route.replace(/^#/, '').split('?')[0];
+      await expect(page.locator('main'), route).toHaveAttribute('data-path', path);
+      await expect(page.locator('main h1'), `${route} has exactly one h1`).toHaveCount(1);
+      await expect(page.locator('main h1'), route).toBeVisible();
       await expect(page.locator('main .error-card'), `${route} fell into the error card`).toHaveCount(0);
     }
     expect(problems).toEqual([]);
@@ -55,6 +58,7 @@ test('the service worker installs and the app works offline', async ({ page, con
   await expect(page.locator('main h1').first()).toBeVisible();
   for (const route of ['#/requests', '#/learn/wsc/98', '#/pray']) {
     await page.goto(`/${route}`);
+    await expect(page.locator('main'), route).toHaveAttribute('data-path', route.slice(1));
     await expect(page.locator('main h1').first(), route).toBeVisible();
   }
   await context.setOffline(false);

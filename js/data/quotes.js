@@ -1,6 +1,6 @@
 /*
- * Short quotations on prayer from Reformed and Puritan writers, shown in the
- * "From the Puritans" card on Today.
+ * Short quotations on prayer from older Reformed writers, shown in the
+ * "A word on prayer" card on Today.
  *
  * Rules for this list:
  *  - Public-domain authors and works only (published before 1929).

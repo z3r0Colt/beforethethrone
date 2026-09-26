@@ -32,8 +32,8 @@
 
 .view-requests .req-chips {
   /* Room for the focus ring, which the scrolling row would otherwise clip. */
-  margin: -6px 0;
-  padding: 6px 6px;
+  margin: -6px;
+  padding: 6px;
   scroll-padding-inline: 1rem;
 }
 

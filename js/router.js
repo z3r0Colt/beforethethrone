@@ -6,6 +6,8 @@ let mainEl = null;
 let cleanup = null;
 let renderSeq = 0;
 let onRouteHook = null;
+let lastPath = null;
+let prevPath = null;
 
 export function parseHash(hash) {
   const raw = String(hash || '').replace(/^#/, '');
@@ -37,6 +39,12 @@ export function defineRoutes(table, { main, onRoute } = {}) {
   routes = table;
   if (main) mainEl = main;
   if (onRoute) onRouteHook = onRoute;
+}
+
+// The path shown before the current one (null on first load). Lets a page
+// send the user back where they came from.
+export function previousPath() {
+  return prevPath;
 }
 
 export function currentPath() {
@@ -94,6 +102,10 @@ export async function render() {
     return undefined;
   }
   const { route, params } = found;
+  if (path !== lastPath) {
+    prevPath = lastPath;
+    lastPath = path;
+  }
   if (typeof cleanup === 'function') {
     try { cleanup(); } catch (e) { console.error(e); }
   }
@@ -123,6 +135,8 @@ export async function render() {
     console.error(error);
     mainEl.replaceChildren(errorCard(error));
   }
+  // Marks which path finished rendering (tests wait on this).
+  mainEl.dataset.path = path;
   const title = mainEl.querySelector('h1');
   if (title && document.activeElement !== title && !mainEl.contains(document.activeElement)) {
     if (!title.hasAttribute('tabindex')) title.setAttribute('tabindex', '-1');

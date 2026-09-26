@@ -7,7 +7,7 @@ A prayer app for Reformed Presbyterians. It works on any phone or computer, inst
 
 ## What it does
 
-**Today.** A greeting, a call to prayer, the requests due today, a verse of the day, five psalms to pray through the Psalter each month, a Shorter Catechism question of the day, and a word from the Puritans. On the Lord's Day it reminds you of the Sabbath.
+**Today.** A greeting, a call to prayer, the requests due today, a verse of the day, five psalms to pray through the Psalter each month, a Shorter Catechism question of the day, and a short word on prayer from J. C. Ryle. On the Lord's Day it reminds you of the Sabbath.
 
 **Guided prayer.** Pray through your requests by one of four patterns.
 
@@ -90,6 +90,6 @@ Scripture quotations are from the ESV® Bible (The Holy Bible, English Standard 
 
 The Westminster Confession of Faith and Catechisms (1640s) are in the public domain. The text comes from the [Creeds.json](https://github.com/NonlinearFruit/Creeds.json) project.
 
-Quotations from the Puritans and other older writers come from public-domain works published before 1929.
+The quotations from J. C. Ryle come from his *Practical Religion* (1878), which is in the public domain.
 
 *Soli Deo Gloria.*
