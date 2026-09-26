@@ -166,7 +166,7 @@ test('catechism helpers', () => {
 
 test('the Confession chapter 21 and Larger Catechism on prayer are present', () => {
   assert.deepEqual(WCF_21.sections.map((s) => s.n), [1, 2, 3, 4, 5, 6, 7, 8]);
-  assert.match(WCF_21.sections[2].text, /Prayer, with thanksgiving/);
+  assert.match(WCF_21.sections[2].text, /^Prayer,? with thanksgiving/);
   assert.deepEqual(WLC_PRAYER.map((q) => q.n), Array.from({ length: 19 }, (_, i) => 178 + i));
 });
 
