@@ -123,7 +123,9 @@ function watchStorage() {
     }
   });
   let lastWarned = 0;
-  window.addEventListener('btt:storage-error', () => {
+  window.addEventListener('btt:storage-error', (e) => {
+    // A page that explains a failed save itself needs no second message.
+    if (e.detail && e.detail.reported) return;
     const now = Date.now();
     if (now - lastWarned < 30000) return;
     lastWarned = now;

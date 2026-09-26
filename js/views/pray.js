@@ -11,14 +11,16 @@ import {
 } from '../dom.js';
 import {
   getState, markPrayed, markAnswered, recordSession, addJournal, todaysRotation,
+  lastSaveOk, saveAgain, withOwnWarning,
 } from '../store.js';
 import { dueToday, groupByCategory, sortRequests } from '../schedule.js';
 import { dayKey, parseDayKey, dayOfYear, isLordsDay, formatShort } from '../dates.js';
-import { getVerse, VERSES } from '../data/scripture.js';
+import { getVerse, findVerseByTypedRef, typedRefForLink } from '../data/scripture.js';
 import * as catechism from '../data/catechism.js';
 import * as guides from '../data/guides.js';
 
 const SESSION_KEY = 'beforethethrone:pray-session';
+const RECORDED_KEY = 'beforethethrone:pray-recorded';
 
 let idSeq = 0;
 const nextId = (prefix) => `pray-${prefix}-${++idSeq}`;
@@ -43,6 +45,26 @@ function clearSaved() {
   try { sessionStorage.removeItem(SESSION_KEY); } catch { /* storage blocked */ }
 }
 
+// Times of prayer that were finished but could not be written to the device.
+// They are kept apart from the progress of the next time of prayer, so
+// starting another never overwrites them.
+function readRecorded() {
+  try {
+    const raw = globalThis.sessionStorage && sessionStorage.getItem(RECORDED_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((x) => x && typeof x === 'object') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecorded(list) {
+  try {
+    if (list.length) sessionStorage.setItem(RECORDED_KEY, JSON.stringify(list));
+    else sessionStorage.removeItem(RECORDED_KEY);
+  } catch { /* storage blocked */ }
+}
+
 function validIso(v) {
   if (typeof v !== 'string') return null;
   const d = new Date(v);
@@ -50,14 +72,15 @@ function validIso(v) {
 }
 
 // Records progress saved by another method or on an earlier day, just as
-// ending that time of prayer would have. Returns what was kept, or null.
+// ending that time of prayer would have. Returns what was kept, or null. A
+// time of prayer that was finished is recorded even with no marks or note.
 function keepEarlier(saved, now) {
   const live = new Set(getState().requests.map((r) => r.id));
   const ids = Array.isArray(saved.checked)
     ? [...new Set(saved.checked.filter((id) => typeof id === 'string' && live.has(id)))]
     : [];
   const text = typeof saved.note === 'string' ? saved.note.trim() : '';
-  if (!ids.length && !text) return null;
+  if (!ids.length && !text && !saved.recorded) return null;
   const m = guides.getMethod(saved.method);
   const startedAt = validIso(saved.startedAt) || now.toISOString();
   const finishedAt = validIso(saved.savedAt) || startedAt;
@@ -68,27 +91,37 @@ function keepEarlier(saved, now) {
   return { note: Boolean(text) };
 }
 
+// A time of prayer that was finished but could not be written to the device
+// keeps its progress, marked as recorded. While this page stays open the
+// record is still held in memory, so it must not be counted a second time.
+function recordedInMemory(saved) {
+  if (!saved || !saved.recorded) return false;
+  const startedAt = validIso(saved.startedAt);
+  return Boolean(startedAt) && getState().sessions.some((x) => x.startedAt === startedAt && x.method === saved.method);
+}
+
+// Tries again to keep the times of prayer that could not be written. One lost
+// from memory, as after a reload, is recorded again from its kept progress.
+// The kept copies are cleared once the device holds them. Returns what was
+// recorded again, or null.
+function settleRecorded(now) {
+  const list = readRecorded();
+  if (!list.length) return null;
+  let kept = null;
+  for (const item of list) {
+    if (recordedInMemory(item)) continue;
+    try {
+      const result = keepEarlier(item, now);
+      if (result) kept = { note: Boolean(kept && kept.note) || result.note };
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  if (lastSaveOk() || saveAgain()) writeRecorded([]);
+  return kept;
+}
+
 // ---------- content helpers ----------
-
-// A promise is matched to a quoted verse the same way the request editor
-// matches it, so the Scripture shown while writing is shown while praying.
-const REF_INDEX = new Map(VERSES.map((v) => [v.ref.toLowerCase(), v.ref]));
-const REF_PATTERN = /^(?:[1-3] ?)?[A-Za-z]+(?: of [A-Za-z]+| [A-Za-z]+)? \d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?$/;
-
-function cleanRef(text) {
-  return String(text || '')
-    .trim()
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/\s*-\s*/g, '-')
-    .replace(/\s*:\s*/g, ':')
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;]+$/, '');
-}
-
-function promiseVerse(ref) {
-  const known = REF_INDEX.get(ref.toLowerCase().replace(/^psalms /, 'psalm '));
-  return known ? getVerse(known) : null;
-}
 
 function promptsOf(step) {
   if (Array.isArray(step.prompts)) return step.prompts.filter(Boolean);
@@ -211,12 +244,13 @@ export function render(main, { query = {}, navigate } = {}) {
 
   // Restore progress only for the same method on the same day. Any other
   // saved progress is recorded first, so its marks and note are kept.
+  let keptEarlier = settleRecorded(now);
   let saved = readSaved();
   const resume = Boolean(saved) && saved.method === method.id && saved.dayKey === today;
-  let keptEarlier = null;
   if (saved && !resume) {
     try {
-      keptEarlier = keepEarlier(saved, now);
+      const earlier = keepEarlier(saved, now);
+      if (earlier) keptEarlier = { note: earlier.note || Boolean(keptEarlier && keptEarlier.note) };
     } catch (error) {
       console.error(error);
     } finally {
@@ -253,12 +287,16 @@ export function render(main, { query = {}, navigate } = {}) {
   const hasProgress = () => checked.size > 0 || note.trim().length > 0;
   const worthKeeping = () => hasProgress() || index > 0;
 
-  function save() {
-    if (done) return;
-    writeSaved({
+  function snapshot() {
+    return {
       method: method.id, dayKey: sessionDay, step: index, checked: [...checked], note, startedAt,
       savedAt: new Date().toISOString(),
-    });
+    };
+  }
+
+  function save() {
+    if (done) return;
+    writeSaved(snapshot());
   }
 
   setTitle('Pray');
@@ -305,11 +343,13 @@ export function render(main, { query = {}, navigate } = {}) {
   function renderPromise(text, describedIds) {
     const id = nextId('promise');
     describedIds.push(id);
-    const ref = cleanRef(text);
-    const verse = ref ? promiseVerse(ref) : null;
+    // Matched the same way the request editor matches it, so the Scripture
+    // shown while writing is the Scripture shown while praying.
+    const verse = findVerseByTypedRef(text);
+    const ref = verse ? null : typedRefForLink(text);
     let shown;
     if (verse) shown = renderScripture(verse, { className: 'pray-promise-verse' });
-    else if (REF_PATTERN.test(ref) && ref.length <= 40) shown = h('p', { class: 'pray-promise-text' }, 'Read ', esvLink(ref), ' on esv.org');
+    else if (ref) shown = h('p', { class: 'pray-promise-text' }, 'Read ', esvLink(ref), ' on esv.org');
     else shown = h('p', { class: 'pray-promise-text' }, text);
     return h('div', { class: 'pray-req-promise', id },
       h('span', { class: 'pray-req-label' }, 'Pleading'),
@@ -372,13 +412,23 @@ export function render(main, { query = {}, navigate } = {}) {
 
   function openAnswered(r, li) {
     const ta = h('textarea', { class: 'textarea', rows: '4', maxlength: '5000' });
+    const noteField = field('How did the Lord answer?', ta, { hint: 'This will be kept on your Ebenezer page, a stone of remembrance of his help.' });
+    // A request prayed for again after an earlier answer keeps that answer,
+    // and markAnswered adds the new words after it.
+    const current = getState().requests.find((x) => x.id === r.id) || r;
+    if (current.answerNote && current.answerNote.trim()) {
+      const keptId = `${ta.id}-kept`;
+      noteField.append(h('p', { class: 'hint pray-answer-kept', id: keptId },
+        'Your earlier answer is kept. What you write here is added to it.'));
+      ta.setAttribute('aria-describedby', [ta.getAttribute('aria-describedby'), keptId].filter(Boolean).join(' '));
+    }
     openSheetHandle = openSheet({
       title: 'The Lord has answered',
       className: 'pray-sheet',
       body: (el) => {
         el.append(
           h('p', { class: 'pray-sheet-req' }, r.title),
-          field('How did the Lord answer?', ta, { hint: 'This will be kept on your Ebenezer page, a stone of remembrance of his help.' }),
+          noteField,
         );
       },
       onClose: () => { openSheetHandle = null; },
@@ -581,13 +631,32 @@ export function render(main, { query = {}, navigate } = {}) {
     if (text) addJournal({ kind: 'session', title: method.name, text, date: sessionDay });
   }
 
-  function finish() {
-    if (done) return;
-    record();
+  // Records this time of prayer and closes it. The progress kept in
+  // sessionStorage is cleared only once the record has reached the device, so
+  // a failed write loses nothing.
+  function wrapUp() {
+    // A failed write is explained here, so the app's general warning is held back.
+    const stored = withOwnWarning(() => {
+      record();
+      return lastSaveOk() || saveAgain();
+    });
     done = true;
     clearSaved();
+    if (stored) {
+      toast('Amen');
+      return;
+    }
+    writeRecorded([...readRecorded(), { ...snapshot(), recorded: true }]);
+    toast('Amen. Your prayer could not be saved on this device just now. A backup from Settings will keep it safe.', {
+      action: { label: 'Settings', onClick: () => navigate('/settings') },
+      timeout: 10000,
+    });
+  }
+
+  function finish() {
+    if (done) return;
     nextBtn.disabled = true;
-    toast('Amen');
+    wrapUp();
     navigate('/today');
   }
 
@@ -609,10 +678,7 @@ export function render(main, { query = {}, navigate } = {}) {
       cancelLabel: 'Keep praying',
     });
     if (!yes || done || !alive) return;
-    record();
-    done = true;
-    clearSaved();
-    toast('Amen');
+    wrapUp();
     navigate('/today');
   }
 

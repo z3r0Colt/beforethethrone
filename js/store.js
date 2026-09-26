@@ -29,6 +29,7 @@ let storage = safeLocalStorage();
 let state = null;
 let persistRequested = false;
 let lastPersistOk = true;
+let ownWarning = 0;
 const listeners = new Set();
 
 // ---------- small helpers ----------
@@ -244,7 +245,7 @@ export function migrate(raw) {
 
 function emitStorageError(error) {
   if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-    window.dispatchEvent(new CustomEvent('btt:storage-error', { detail: { error } }));
+    window.dispatchEvent(new CustomEvent('btt:storage-error', { detail: { error, reported: ownWarning > 0 } }));
   }
 }
 
@@ -337,6 +338,32 @@ export function lastSaveOk() {
 // Tries once more to write the current state, as after freeing some room.
 export function saveAgain() {
   return persist();
+}
+
+// Runs fn for a caller that tells the user itself when a save fails, so the
+// app's general warning is not shown as well.
+export function withOwnWarning(fn) {
+  ownWarning += 1;
+  try {
+    return fn();
+  } finally {
+    ownWarning -= 1;
+  }
+}
+
+// What memory holds now, to go back to if a whole new state cannot be stored.
+export function checkpoint() {
+  return { state: getState(), ok: lastPersistOk };
+}
+
+// Goes back to a checkpoint in memory without writing, as when the device
+// would not store a restored backup. Storage still holds what it held, so
+// anything kept only in memory before is kept just as it was.
+export function rollback(mark) {
+  state = mark.state;
+  lastPersistOk = mark.ok;
+  notify();
+  return state;
 }
 
 export function _setStorageForTests(fake) {

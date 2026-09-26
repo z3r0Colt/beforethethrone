@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { exportBackup, parseBackup, backupFilename } from '../../js/backup.js';
+import { exportBackup, parseBackup, backupFilename, MAX_BACKUP_BYTES } from '../../js/backup.js';
 import { defaultState, migrate } from '../../js/store.js';
 
 test('export then parse round-trips', () => {
@@ -35,4 +35,18 @@ test('backupFilename uses the local date', () => {
 
 test('default state exports', () => {
   assert.equal(exportBackup(defaultState()).app, 'beforethethrone');
+});
+
+test('a large pretty-printed backup is accepted, an oversized file is not', () => {
+  const state = migrate({ requests: [{ title: 'Our pastor', categoryId: 'church' }] });
+  // Older backups were indented, so the file can be far larger than the state.
+  const roomy = JSON.stringify(exportBackup(state), null, 2) + ' '.repeat(6 * 1024 * 1024);
+  assert.ok(roomy.length > 5 * 1024 * 1024);
+  const ok = parseBackup(roomy);
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.state, state);
+
+  const tooBig = parseBackup(' '.repeat(MAX_BACKUP_BYTES) + '{}');
+  assert.equal(tooBig.ok, false);
+  assert.match(tooBig.error, /too large/);
 });

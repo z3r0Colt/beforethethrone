@@ -6,7 +6,12 @@ import { dayKey } from './dates.js';
 
 export const BACKUP_APP = 'beforethethrone';
 export const BACKUP_FORMAT = 1;
-export const MAX_BACKUP_BYTES = 5 * 1024 * 1024;
+// The largest backup text parseBackup accepts. It is compared with the text's
+// length, a count of characters rather than bytes, and a backup file can be
+// well over the size of the state it holds. Older backups were pretty-printed
+// with indentation on every line, so the limit leaves generous room above the
+// few megabytes that browser storage allows for the state itself.
+export const MAX_BACKUP_BYTES = 20 * 1024 * 1024;
 
 export function exportBackup(state, now = new Date()) {
   return {

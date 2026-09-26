@@ -139,14 +139,6 @@
 
 .view-pray .pray-readlink { color: var(--muted); }
 
-/* Give the shared reference links a full 44px tap target here. */
-.view-pray .scripture-ref {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  margin-top: 0;
-}
-
 /* The catechism, quiet beside the Word. */
 .view-pray .pray-qa {
   padding: 1rem 1.1rem;

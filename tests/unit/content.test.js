@@ -2,7 +2,9 @@
 // within Crossway's quotation limit, and the catechism and guides hold together.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { VERSES, getVerse, countVerses, verseOfTheDay, ESV_NOTICE } from '../../js/data/scripture.js';
+import {
+  VERSES, getVerse, countVerses, verseOfTheDay, ESV_NOTICE, findVerseByTypedRef, typedRefForLink,
+} from '../../js/data/scripture.js';
 import { WSC, catechismOfTheDay, formatProofRef } from '../../js/data/catechism.js';
 import { WCF_21, WLC_PRAYER } from '../../js/data/standards.js';
 import * as guides from '../../js/data/guides.js';
@@ -32,6 +34,26 @@ test('countVerses reads references', () => {
   assert.equal(countVerses('Ephesians 3:14-19'), 6);
   assert.equal(countVerses('Jude 24-25'), 2);
   assert.equal(countVerses('1 Samuel 7:12'), 1);
+});
+
+test('findVerseByTypedRef matches a promise typed by hand', () => {
+  assert.equal(findVerseByTypedRef('philippians 4:19'), getVerse('Philippians 4:19'));
+  assert.equal(findVerseByTypedRef('Psalms 62:8'), getVerse('Psalm 62:8'));
+  assert.equal(findVerseByTypedRef('Philippians 4:6–7'), getVerse('Philippians 4:6-7'));
+  assert.equal(findVerseByTypedRef('  1 john 5:14 - 15. '), getVerse('1 John 5:14-15'));
+  assert.ok(VERSES.includes(findVerseByTypedRef('philippians 4:19')), 'returns the VERSES entry itself');
+  // Romans 8:28 is not quoted in the app, so it is linked instead.
+  assert.equal(findVerseByTypedRef('romans 8:28'), null);
+  assert.equal(typedRefForLink('romans 8:28'), 'romans 8:28');
+  // Plain words are neither quoted nor linked.
+  for (const words of ['my son at school', 'God will provide', '', '   ', null, undefined]) {
+    assert.equal(findVerseByTypedRef(words), null, String(words));
+    assert.equal(typedRefForLink(words), null, String(words));
+  }
+});
+
+test('every quoted ref is found when typed in lower case', () => {
+  for (const v of VERSES) assert.equal(findVerseByTypedRef(v.ref.toLowerCase()), v, v.ref);
 });
 
 test('ESV quotations stay well under Crossway’s 500-verse limit', () => {

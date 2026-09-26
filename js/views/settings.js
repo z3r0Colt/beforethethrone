@@ -5,7 +5,9 @@ import {
   h, icon, renderScripture, pageTitle, backLink, ornament, toast, confirmDialog,
   field, segmented, toggle, downloadFile, setTitle,
 } from '../dom.js';
-import { getState, setSetting, replaceState, resetAll } from '../store.js';
+import {
+  getState, setSetting, replaceState, resetAll, lastSaveOk, checkpoint, rollback, withOwnWarning,
+} from '../store.js';
 import { formatShort } from '../dates.js';
 import { buildReminderICS } from '../ics.js';
 import { exportBackup, backupFilename, parseBackup, readFileAsText, MAX_BACKUP_BYTES } from '../backup.js';
@@ -532,7 +534,15 @@ function dataSection(go) {
       danger: true,
     });
     if (!ok) return;
-    replaceState(result.state);
+    // If the device will not store the backup, memory goes back to just what
+    // it held before, including anything not yet written to the device.
+    const before = checkpoint();
+    withOwnWarning(() => replaceState(result.state));
+    if (!lastSaveOk()) {
+      rollback(before);
+      toast('This backup could not be restored on this device. Storage may be full or blocked. Everything here is just as it was.', { timeout: 10000 });
+      return;
+    }
     toast('Your backup has been restored.');
     go('/settings');
   }

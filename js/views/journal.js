@@ -7,9 +7,11 @@
 // 'btt:journal-draft:<id>'. A draft is cleared on save or discard.
 
 import {
-  h, icon, pageTitle, backLink, emptyState, toast, confirmDialog, field, setTitle,
+  h, icon, pageTitle, backLink, emptyState, toast, confirmDialog, field, setTitle, autosize,
 } from '../dom.js';
-import { getState, addJournal, updateJournal, deleteJournal } from '../store.js';
+import {
+  getState, update, addJournal, updateJournal, deleteJournal, lastSaveOk, saveAgain, withOwnWarning,
+} from '../store.js';
 import { dayKey, parseDayKey, formatLong, formatMonth, formatShort, weekdayName } from '../dates.js';
 import { parseHash } from '../router.js';
 
@@ -44,9 +46,12 @@ function readDraft(key) {
   }
 }
 
+// True only when the draft was written, so a caller can say it was kept.
 function writeDraft(key, values) {
   try {
-    storage()?.setItem(key, JSON.stringify({ ...values, savedAt: new Date().toISOString() }));
+    const store = storage();
+    if (!store) return false;
+    store.setItem(key, JSON.stringify({ ...values, savedAt: new Date().toISOString() }));
     return true;
   } catch {
     return false;
@@ -439,21 +444,6 @@ function renderNotFound(main) {
   return undefined;
 }
 
-// Grows a textarea to fit its words without making the page jump.
-function autosize(el) {
-  const fit = () => {
-    if (!el.isConnected) return;
-    const holder = el.parentElement;
-    holder.style.minHeight = `${holder.offsetHeight}px`;
-    el.style.height = 'auto';
-    const border = el.offsetHeight - el.clientHeight;
-    el.style.height = `${el.scrollHeight + border}px`;
-    holder.style.minHeight = '';
-  };
-  el.addEventListener('input', fit);
-  return fit;
-}
-
 function describe(el, id, on) {
   const ids = new Set((el.getAttribute('aria-describedby') || '').split(/\s+/).filter(Boolean));
   if (on) ids.add(id); else ids.delete(id);
@@ -590,23 +580,99 @@ function renderEditor(main, { navigate, path }, id) {
   function save(e) {
     if (e) e.preventDefault();
     if (!validate()) return;
-    const v = values();
-    const fields = { date: v.date, title: v.title.trim(), text: cleanText(v.text) };
-    try {
-      if (isNew) {
-        addJournal({ ...fields, kind: 'entry' });
-      } else {
-        updateJournal(id, fields);
-      }
-    } catch (error) {
-      toast(error.message || 'Could not save this entry.');
+    // Nothing changed, so nothing needs writing.
+    if (!isNew && !isDirty()) {
+      finish('Changes saved.');
       return;
     }
+    const v = values();
+    const fields = { date: v.date, title: v.title.trim(), text: cleanText(v.text) };
+    const prior = isNew ? null : getState().journal.find((x) => x.id === id) || null;
+    let saved = null;
+    // A failed save is explained here, so the app's general warning is held back.
+    try {
+      withOwnWarning(() => {
+        if (isNew) {
+          saved = addJournal({ ...fields, kind: 'entry' });
+        } else {
+          saved = updateJournal(id, fields);
+        }
+      });
+    } catch (error) {
+      say(error.message || 'Could not save this entry.');
+      return;
+    }
+    if (!saved) {
+      // The entry was deleted in another window while this one was open.
+      say('This entry was deleted in another window, so these changes could not be saved. Your words are still here to copy.', { timeout: 10000 });
+      return;
+    }
+    if (!lastSaveOk() && !withOwnWarning(saveAgain)) {
+      keepUnsaved(saved, prior);
+      return;
+    }
+    finish(isNew ? 'Entry saved.' : 'Changes saved.');
+  }
+
+  // Messages rise from just above the tab bar. When the Save bar sits where
+  // they would appear, as when it is held at the foot of a long entry, they
+  // are raised above it, so Save can be tried again at once.
+  function placeToasts() {
+    const html = document.documentElement;
+    if (!actions.isConnected) {
+      html.style.removeProperty('--jr-toast-bottom');
+      return;
+    }
+    const region = document.querySelector('.toast-region');
+    const gap = 0.75 * (parseFloat(getComputedStyle(html).fontSize) || 16);
+    const floor = window.innerHeight - (parseFloat(getComputedStyle(actions).bottom) || 0) - gap;
+    const room = Math.max(region ? region.offsetHeight : 0, 72);
+    const bar = actions.getBoundingClientRect();
+    if (bar.bottom > floor - room && bar.top < floor + gap) {
+      html.style.setProperty('--jr-toast-bottom', `${Math.round(window.innerHeight - bar.top + gap)}px`);
+    } else {
+      html.style.removeProperty('--jr-toast-bottom');
+    }
+  }
+
+  function say(message, options) {
+    toast(message, options);
+    placeToasts();
+  }
+
+  function finish(message) {
     finished = true;
     clearTimeout(timer);
     removeDraft(draftKey);
-    toast(isNew ? 'Entry saved.' : 'Changes saved.');
+    toast(message);
     leave();
+  }
+
+  // The device would not store the entry. It is taken back out of memory, so
+  // the list never shows it as kept and a second Save adds no copy. The words
+  // stay here in the editor, and in the draft when the device allows it.
+  function keepUnsaved(saved, prior) {
+    try {
+      withOwnWarning(() => {
+        if (isNew && saved) deleteJournal(saved.id);
+        else if (prior) {
+          update((s) => {
+            const i = s.journal.findIndex((e) => e.id === id);
+            if (i >= 0) s.journal[i] = prior;
+          });
+        }
+      });
+    } catch (error) {
+      console.error(error);
+    }
+    clearTimeout(timer);
+    timer = null;
+    const kept = writeDraft(draftKey, values());
+    const what = isNew ? 'This entry' : 'Your changes';
+    say(kept
+      ? `${what} could not be saved on this device. Your words are kept here as a draft.`
+      : `${what} could not be saved on this device. Please copy your words somewhere safe before you leave this page.`,
+    { timeout: 10000 });
   }
 
   async function cancel() {
@@ -644,6 +710,10 @@ function renderEditor(main, { navigate, path }, id) {
     leave();
   }
 
+  const actions = h('div', { class: 'jr-form-actions' },
+    h('button', { type: 'submit', class: 'btn btn-primary' }, icon('check'), 'Save'),
+    h('button', { type: 'button', class: 'btn btn-ghost', onClick: cancel }, 'Cancel'));
+
   const form = h('form', {
     class: 'card jr-form',
     novalidate: true,
@@ -658,9 +728,7 @@ function renderEditor(main, { navigate, path }, id) {
   },
   h('div', { class: 'jr-form-top' }, dateField, titleField),
   textField,
-  h('div', { class: 'jr-form-actions' },
-    h('button', { type: 'submit', class: 'btn btn-primary' }, icon('check'), 'Save'),
-    h('button', { type: 'button', class: 'btn btn-ghost', onClick: cancel }, 'Cancel')));
+  actions);
 
   const back = backLink(`#${fromList ? lastListPath : LIST_PATH}`, 'Journal');
   back.addEventListener('click', (e) => {
@@ -721,8 +789,9 @@ function renderEditor(main, { navigate, path }, id) {
 
   main.append(root);
   fitText();
-  const onResize = () => fitText();
+  const onResize = () => { fitText(); placeToasts(); };
   window.addEventListener('resize', onResize);
+  window.addEventListener('scroll', placeToasts, { passive: true });
 
   if (isNew) {
     textInput.focus({ preventScroll: true });
@@ -732,6 +801,8 @@ function renderEditor(main, { navigate, path }, id) {
 
   return () => {
     window.removeEventListener('resize', onResize);
+    window.removeEventListener('scroll', placeToasts);
+    document.documentElement.style.removeProperty('--jr-toast-bottom');
     document.removeEventListener('visibilitychange', onHide);
     window.removeEventListener('pagehide', saveDraftNow);
     saveDraftNow();

@@ -309,6 +309,43 @@ export function getVerse(ref) {
   return BY_REF.get(ref) || null;
 }
 
+// ---------- references the user types ----------
+
+// A promise on a request is typed freely, so "philippians 4:19", "Psalms 62:8"
+// and "Philippians 4:6–7" should all find the verse the app quotes. The typed
+// text is tidied first (spacing, dashes, a trailing period) and then matched
+// without regard to case. Shared by the request editor and the time of prayer,
+// so the Scripture shown while writing is the Scripture shown while praying.
+const BY_TYPED_REF = new Map(VERSES.map((verse) => [verse.ref.toLowerCase(), verse]));
+const TYPED_REF_PATTERN = /^(?:[1-3] ?)?[A-Za-z]+(?: of [A-Za-z]+| [A-Za-z]+)? \d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?$/;
+const MAX_TYPED_REF = 40;
+
+function tidyTypedRef(text) {
+  return String(text ?? '')
+    .trim()
+    .replace(/[–—]/g, '-')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s*:\s*/g, ':')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;]+$/, '');
+}
+
+// The VERSES entry a typed reference names, or null when the app does not
+// quote that passage or the text is not a reference at all.
+export function findVerseByTypedRef(text) {
+  const ref = tidyTypedRef(text);
+  if (!ref) return null;
+  return BY_TYPED_REF.get(ref.toLowerCase().replace(/^psalms /, 'psalm ')) || null;
+}
+
+// The tidied reference when the typed text reads like one ("romans 8:28"), so
+// a passage the app does not quote can still be linked to esv.org. Returns
+// null for plain words.
+export function typedRefForLink(text) {
+  const ref = tidyTypedRef(text);
+  return ref && ref.length <= MAX_TYPED_REF && TYPED_REF_PATTERN.test(ref) ? ref : null;
+}
+
 // Books with a single chapter, whose refs are written "Jude 24-25".
 const SINGLE_CHAPTER_BOOKS = new Set(['Obadiah', 'Philemon', '2 John', '3 John', 'Jude']);
 

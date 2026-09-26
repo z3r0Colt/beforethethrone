@@ -6,7 +6,9 @@
      both themes (darker on parchment, lighter on night). */
   --learn-gold: var(--gold);
   --learn-gold: color-mix(in srgb, var(--gold) 78%, var(--ink));
-  --learn-scroll-margin: calc(var(--header-h) + var(--safe-top) + 0.75rem);
+  /* The page's scroll-padding already clears the sticky header, so jump
+     targets need only a little air of their own. */
+  --learn-scroll-margin: 0.25rem;
 }
 
 .view-learn .qa-num,

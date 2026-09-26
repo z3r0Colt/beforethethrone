@@ -39,7 +39,7 @@
 
 .view-requests .req-chips .chip {
   flex: none;
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .view-requests .req-chips .chip .count {

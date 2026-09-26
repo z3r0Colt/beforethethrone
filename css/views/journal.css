@@ -56,7 +56,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--gold-ink);
 }
 
 .view-journal .jr-day {
@@ -119,7 +119,7 @@
 
 .view-journal .jr-tag .icon svg { width: 14px; height: 14px; }
 
-.view-journal .jr-tag-session { color: var(--gold); background: var(--gold-soft); }
+.view-journal .jr-tag-session { color: var(--gold-ink); background: var(--gold-soft); }
 
 .view-journal .jr-tag-draft { color: var(--accent); background: var(--accent-soft); }
 
@@ -183,6 +183,18 @@
 .view-journal .jr-empty { margin-top: 0.25rem; }
 
 /* ---------- editor ---------- */
+
+/* The line being typed stays clear of the sticky Save bar (its padding,
+   button, and top border) as well as the tab bar beneath it. */
+html:has(.jr-editor) {
+  scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 1.5rem + 45px + 0.75rem);
+}
+
+/* Messages keep their usual place unless the Save bar sits there. The editor
+   then sets --jr-toast-bottom, so they rise above it and leave Save clear. */
+html:has(.jr-editor) .toast-region {
+  bottom: var(--jr-toast-bottom, calc(var(--tabbar-h) + var(--safe-bottom) + 0.75rem));
+}
 
 .view-journal .jr-form {
   padding: 1.1rem 1.1rem 1rem;

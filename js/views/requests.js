@@ -4,7 +4,7 @@
 
 import {
   h, icon, pageTitle, backLink, emptyState, toast, openSheet, confirmDialog,
-  field, segmented, setTitle, renderScripture, esvLink,
+  field, segmented, setTitle, renderScripture, esvLink, autosize,
 } from '../dom.js';
 import {
   getState, subscribe, getRequest, addRequest, updateRequest, deleteRequest, markAnswered,
@@ -13,7 +13,7 @@ import {
 import { groupByCategory, frequencyLabel, sortRequests } from '../schedule.js';
 import { formatRelative, formatShort, weekdayName } from '../dates.js';
 import { parseHash } from '../router.js';
-import { getVerse, VERSES } from '../data/scripture.js';
+import { getVerse, findVerseByTypedRef, typedRefForLink } from '../data/scripture.js';
 
 const NEW_CATEGORY = '__new__';
 const LIST_PATH = '/requests';
@@ -156,18 +156,6 @@ function clearError(control, errEl, describeTarget = control) {
   describe(describeTarget, errEl.id, false);
 }
 
-// Grows a textarea to fit its text. Returns the function that measures it.
-function autosize(el) {
-  const fit = () => {
-    if (!el.isConnected) return;
-    el.style.height = 'auto';
-    const border = el.offsetHeight - el.clientHeight;
-    el.style.height = `${el.scrollHeight + border}px`;
-  };
-  el.addEventListener('input', fit);
-  return fit;
-}
-
 // ---------- drafts (browser storage, guarded) ----------
 
 // Typing in the editor is kept as a draft until it is saved or discarded, so
@@ -247,27 +235,11 @@ function cleanFields(v) {
 
 // Scripture the user names as a promise. Only verses the app already quotes
 // are shown in full. Any other reference becomes a link to esv.org.
-const REF_INDEX = new Map(VERSES.map((v) => [v.ref.toLowerCase(), v.ref]));
-const REF_PATTERN = /^(?:[1-3] ?)?[A-Za-z]+(?: of [A-Za-z]+| [A-Za-z]+)? \d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?$/;
-
-function cleanRef(text) {
-  return String(text || '')
-    .trim()
-    .replace(/[\u2013\u2014]/g, '-')
-    .replace(/\s*-\s*/g, '-')
-    .replace(/\s*:\s*/g, ':')
-    .replace(/\s+/g, ' ')
-    .replace(/[.,;]+$/, '');
-}
-
 function promisePreview(text) {
-  const ref = cleanRef(text);
-  if (!ref) return null;
-  const key = ref.toLowerCase().replace(/^psalms /, 'psalm ');
-  const known = REF_INDEX.get(key);
-  const verse = known ? getVerse(known) : null;
+  const verse = findVerseByTypedRef(text);
   if (verse) return renderScripture(verse, { className: 'req-promise-verse' });
-  if (REF_PATTERN.test(ref) && ref.length <= 40) {
+  const ref = typedRefForLink(text);
+  if (ref) {
     return h('p', { class: 'req-promise-link small' },
       'Read ', esvLink(ref), ' at esv.org', icon('external', { className: 'req-ext' }));
   }
@@ -283,10 +255,16 @@ export function render(main, ctx) {
   else if (path === `${LIST_PATH}/categories`) result = renderCategories(main, ctx);
   else if (path === `${LIST_PATH}/new`) result = renderEditor(main, ctx, null);
   else result = renderEditor(main, ctx, params.id);
-  return () => {
+  const cleanup = () => {
     closeDialogs();
     if (typeof result === 'function') result();
   };
+  // The router asks this before re-rendering for a change made in another
+  // tab, so unsaved typing in the editor is never swept away.
+  if (typeof result === 'function' && typeof result.hasUnsaved === 'function') {
+    cleanup.hasUnsaved = () => result.hasUnsaved();
+  }
+  return cleanup;
 }
 
 // ---------- the list ----------
@@ -837,9 +815,16 @@ function renderEditor(main, { query, navigate, path }, id) {
       if (isNew) {
         addRequest(fields());
         toast('Added to your prayer list.');
-      } else {
-        updateRequest(id, fields());
+      } else if (updateRequest(id, fields())) {
         toast('Changes saved.');
+      } else {
+        // The request was deleted in another window while this one was open.
+        // The words stay here, and can be added as a new request instead.
+        toast('This request was deleted in another window, so these changes could not be saved. Your words are still here.', {
+          action: { label: 'Add as new', onClick: addAsNew },
+          timeout: 10000,
+        });
+        return;
       }
     } catch (error) {
       toast(error.message || 'Could not save this request.');
@@ -847,6 +832,19 @@ function renderEditor(main, { query, navigate, path }, id) {
     }
     dropDraft();
     leave();
+  }
+
+  function addAsNew() {
+    if (finished) return;
+    try {
+      addRequest(fields());
+    } catch (error) {
+      toast(error.message || 'Could not save this request.');
+      return;
+    }
+    toast('Added to your prayer list.');
+    dropDraft();
+    if (form.isConnected) leave();
   }
 
   async function cancel() {
@@ -910,12 +908,15 @@ function renderEditor(main, { query, navigate, path }, id) {
   const onResize = () => { fitTitle(); fitDetails(); };
   window.addEventListener('resize', onResize);
   if (isNew) titleInput.focus();
-  return () => {
+  const cleanup = () => {
     window.removeEventListener('resize', onResize);
     document.removeEventListener('visibilitychange', onHide);
     window.removeEventListener('pagehide', saveDraftNow);
     saveDraftNow();
   };
+  // True while the form differs from the saved request (or from a blank one).
+  cleanup.hasUnsaved = () => !finished && isDirty();
+  return cleanup;
 
   // ----- pieces for an existing request -----
 
@@ -1002,13 +1003,23 @@ function renderEditor(main, { query, navigate, path }, id) {
 
   function openAnswerSheet(r) {
     const note = h('textarea', { class: 'textarea', rows: '5', maxlength: '5000', autocapitalize: 'sentences' });
+    const noteField = field('How did the Lord answer?', note, { hint: 'Optional. You will find this on your Ebenezer.' });
+    // A request prayed for again after an earlier answer keeps that answer,
+    // and markAnswered adds the new words after it.
+    const earlier = getRequest(r.id)?.answerNote || r.answerNote;
+    if (earlier && earlier.trim()) {
+      const keptHint = h('p', { class: 'hint req-answer-kept', id: `${note.id}-kept` },
+        'Your earlier answer is kept. What you write here is added to it.');
+      noteField.append(keptHint);
+      describe(note, keptHint.id, true);
+    }
     sheet({
       title: 'Mark as answered',
       className: 'req-answer-sheet',
       body: (el) => {
         el.append(
           h('p', { class: 'muted' }, 'Write down how the Lord answered. His answer may differ from what you asked, yet it is always wise and good.'),
-          field('How did the Lord answer?', note, { hint: 'Optional. You will find this on your Ebenezer.' }),
+          noteField,
         );
       },
       actions: [

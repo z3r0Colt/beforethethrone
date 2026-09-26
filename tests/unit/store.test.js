@@ -234,6 +234,47 @@ test('lastSaveOk reports whether a change reached storage', () => {
   assert.equal(JSON.parse(storage.getItem(store.STORAGE_KEY)).journal.length, 2);
 });
 
+test('rollback puts memory back as it was when a restore cannot be stored', () => {
+  let fail = false;
+  const storage = fakeStorage();
+  const setItem = storage.setItem;
+  storage.setItem = (k, v) => { if (fail) throw new Error('QuotaExceededError'); setItem(k, v); };
+  store._setStorageForTests(storage);
+  store.addJournal({ text: 'Stored' });
+  fail = true;
+  store.addJournal({ text: 'Only in memory' });
+  const mark = store.checkpoint();
+  let seen = null;
+  store.subscribe((s) => { seen = s; });
+  store.replaceState({ journal: [{ text: 'From the backup' }] });
+  assert.equal(store.lastSaveOk(), false);
+  store.rollback(mark);
+  assert.deepEqual(store.getState().journal.map((e) => e.text), ['Stored', 'Only in memory']);
+  assert.equal(seen, store.getState(), 'listeners hear of the change back');
+  assert.equal(store.lastSaveOk(), false, 'memory still holds what the device does not');
+  assert.equal(JSON.parse(storage.getItem(store.STORAGE_KEY)).journal.length, 1, 'storage is left alone');
+});
+
+test('withOwnWarning marks storage errors as reported by the caller', () => {
+  const hadWindow = 'window' in globalThis;
+  const previous = globalThis.window;
+  const target = new EventTarget();
+  globalThis.window = target;
+  const reported = [];
+  target.addEventListener('btt:storage-error', (e) => reported.push(e.detail.reported));
+  try {
+    store._setStorageForTests(brokenStorage());
+    store.addJournal({ text: 'One' });
+    assert.equal(store.withOwnWarning(() => { store.addJournal({ text: 'Two' }); return 'done'; }), 'done');
+    assert.throws(() => store.withOwnWarning(() => { throw new Error('boom'); }));
+    store.addJournal({ text: 'Three' });
+    assert.deepEqual(reported, [false, true, false]);
+  } finally {
+    if (hadWindow) globalThis.window = previous;
+    else delete globalThis.window;
+  }
+});
+
 test('forgetLocalCopies removes drafts but keeps the main state', () => {
   const storage = fresh({ 'btt:journal-draft': '{"text":"private"}', 'beforethethrone:pray-session': '{}', 'other-app': 'x' });
   store.addRequest({ title: 'Kept' });
