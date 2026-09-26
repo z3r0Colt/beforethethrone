@@ -1,1 +1,587 @@
-/* Styles for the pray view. Namespaced under .view-pray. */
+/* Styles for the pray view. Namespaced under .view-pray.
+   Focus mode: a quiet top bar with progress, one step at a time, and a fixed
+   bar of Back and Next at the bottom. */
+
+.view-pray {
+  --pray-bottom-h: 4.75rem;
+  padding-bottom: calc(var(--pray-bottom-h) + var(--safe-bottom) + 1rem);
+}
+
+/* ---------- top bar ---------- */
+
+/* Sticky, pulled up over the focus-mode padding of .app-main so it sits flush
+   with the top edge and the safe area. */
+.view-pray .pray-top {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  margin: calc(-0.75rem - var(--safe-top)) calc(-1rem - var(--safe-right)) 0 calc(-1rem - var(--safe-left));
+  padding: var(--safe-top) calc(0.25rem + var(--safe-right)) 0 calc(0.25rem + var(--safe-left));
+  background: var(--bg);
+}
+
+.view-pray .pray-top-inner {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 3.5rem;
+}
+
+.view-pray .pray-close { color: var(--muted); }
+.view-pray .pray-close:hover { color: var(--ink); }
+
+.view-pray .pray-top-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+  line-height: 1.25;
+}
+
+.view-pray .pray-method {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.view-pray .pray-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.view-pray .pray-progress {
+  height: 3px;
+  margin: 0 0.75rem;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.view-pray .pray-progress-fill {
+  width: 0;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gold);
+  transition: width 0.35s ease;
+}
+
+/* ---------- a step ---------- */
+
+.view-pray .pray-step {
+  padding-top: 1.75rem;
+  animation: pray-fade 0.4s ease-out;
+}
+
+@keyframes pray-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.view-pray .page-head {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 1.75rem;
+  text-align: center;
+}
+
+.view-pray .page-head::after {
+  content: "";
+  order: -1;
+  width: 3rem;
+  height: 2px;
+  margin-top: 0.85rem;
+  border-radius: 2px;
+  background: var(--gold);
+  opacity: 0.7;
+}
+
+.view-pray .page-title {
+  max-width: 30rem;
+  font-size: clamp(1.6rem, 1.2rem + 2vw, 2.1rem);
+  line-height: 1.2;
+  text-wrap: balance;
+}
+
+.view-pray .page-subtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.view-pray .pray-step > * + * { margin-top: 1.5rem; }
+.view-pray .pray-step > .page-head + * { margin-top: 0; }
+
+/* Scripture, set a little larger than elsewhere for slow reading. */
+.view-pray .pray-verses > * + * { margin-top: 1.25rem; }
+
+.view-pray .pray-scripture .scripture-text {
+  font-size: 1.3rem;
+  line-height: 1.6;
+}
+
+.view-pray .pray-scripture-sm .scripture-text {
+  font-size: 1.15rem;
+}
+
+.view-pray .pray-readlink { color: var(--muted); }
+
+/* Give the shared reference links a full 44px tap target here. */
+.view-pray .scripture-ref {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 0;
+}
+
+/* The catechism, quiet beside the Word. */
+.view-pray .pray-qa {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.view-pray .pray-qa .qa-q { font-size: 1.05rem; }
+
+.view-pray .pray-qa .qa-a {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.view-pray .pray-prompts p {
+  margin: 0 0 0.9rem;
+  font-size: 1.1rem;
+  line-height: 1.65;
+}
+
+.view-pray .pray-prompts p:last-child { margin-bottom: 0; }
+
+.view-pray .pray-seealso-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.view-pray .pray-seealso-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.view-pray .pray-seealso-link {
+  min-height: 44px;
+  color: var(--accent);
+  font-family: var(--serif);
+  font-size: 0.98rem;
+}
+
+.view-pray .pray-seealso-link:hover { background: var(--surface-2); }
+
+.view-pray .pray-orient,
+.view-pray .pray-none,
+.view-pray .pray-summary {
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.view-pray .pray-none a { font-weight: 600; }
+
+.view-pray .pray-summary {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  color: var(--ink);
+  text-align: center;
+}
+
+/* ---------- the Lord's Day ---------- */
+
+.view-pray .pray-lordsday {
+  padding: 1.1rem 1.1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-color: color-mix(in srgb, var(--gold) 55%, var(--line));
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.view-pray .pray-lordsday-title::before {
+  content: "";
+  display: block;
+  width: 2rem;
+  height: 2px;
+  margin-bottom: 0.6rem;
+  border-radius: 2px;
+  background: var(--gold);
+}
+
+.view-pray .pray-lordsday-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.2rem;
+}
+
+.view-pray .pray-lordsday-prompt {
+  margin: 1rem 0 0;
+  line-height: 1.6;
+}
+
+/* ---------- about the method ---------- */
+
+.view-pray .pray-about {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.view-pray .pray-about summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  list-style: none;
+}
+
+.view-pray .pray-about summary::-webkit-details-marker { display: none; }
+
+.view-pray .pray-about-chev { transition: transform 0.2s ease; }
+.view-pray .pray-about-chev svg { width: 20px; height: 20px; }
+.view-pray .pray-about[open] .pray-about-chev { transform: rotate(180deg); }
+
+.view-pray .pray-about p {
+  margin: 0.25rem 0 0.5rem;
+  line-height: 1.6;
+}
+
+/* ---------- requests ---------- */
+
+.view-pray .pray-requests .section-title { margin-bottom: 0.25rem; }
+
+.view-pray .pray-hint {
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.view-pray .pray-group + .pray-group { margin-top: 1.4rem; }
+
+.view-pray .pray-group-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.6rem;
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.view-pray .pray-warrant {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.view-pray .pray-warrant:hover { color: var(--accent); text-decoration: underline; }
+
+.view-pray .pray-req-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin: 0.15rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The whole card is the "Prayed" toggle: the button's ::after stretches over
+   it, while the Answered button and any links sit above that layer. */
+.view-pray .pray-req {
+  position: relative;
+  padding: 0.85rem 1rem 0.05rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.view-pray .pray-req.is-prayed {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: none;
+}
+
+.view-pray .pray-req-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.8rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.view-pray .pray-req-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius);
+}
+
+.view-pray .pray-req-toggle:focus-visible { outline: none; }
+
+.view-pray .pray-req-toggle:focus-visible::after {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.view-pray .pray-check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+  color: transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.view-pray .pray-check .icon svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+.view-pray .pray-req.is-prayed .pray-check {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.view-pray .pray-req-title {
+  flex: 1;
+  min-width: 0;
+  padding-top: 0.15rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.view-pray .pray-req-body,
+.view-pray .pray-req-foot {
+  margin-left: calc(30px + 0.8rem);
+}
+
+.view-pray .pray-req-details {
+  margin: 0.2rem 0 0;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.view-pray .pray-req-promise { margin-top: 0.7rem; }
+
+.view-pray .pray-req-label {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.view-pray .pray-promise-text {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.view-pray .pray-promise-verse { padding-left: 0.75rem; border-left-width: 2px; }
+
+.view-pray .pray-promise-verse .scripture-text {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.view-pray .pray-req a,
+.view-pray .pray-req-answer {
+  position: relative;
+  z-index: 1;
+}
+
+.view-pray .pray-req-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 44px;
+  margin-top: -0.1rem;
+}
+
+.view-pray .pray-req-state {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  visibility: hidden;
+}
+
+.view-pray .pray-req.is-prayed .pray-req-state { visibility: visible; }
+
+.view-pray .pray-req-answer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px;
+  margin-right: -0.5rem;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.view-pray .pray-req-answer:hover { color: var(--accent); background: var(--surface-2); }
+
+.view-pray .pray-req-answered { margin-left: auto; }
+
+/* ---------- remembered answers ---------- */
+
+.view-pray .pray-answered-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.view-pray .pray-answered-item {
+  display: flex;
+  gap: 0.8rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.view-pray .pray-answered-item:last-child { border-bottom: 1px solid var(--line); }
+
+.view-pray .pray-answered-icon {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+  color: var(--gold);
+}
+
+.view-pray .pray-answered-body { flex: 1; min-width: 0; }
+
+.view-pray .pray-answered-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.view-pray .pray-answered-meta {
+  margin: 0.1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.view-pray .pray-answered-note {
+  margin: 0.4rem 0 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-style: italic;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+/* ---------- closing ---------- */
+
+.view-pray .pray-closing-note .field { margin: 0; }
+
+.view-pray .pray-note { min-height: 6.5rem; }
+
+/* ---------- bottom bar ---------- */
+
+.view-pray .pray-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+  padding: 0.6rem calc(1rem + var(--safe-right)) calc(0.6rem + var(--safe-bottom)) calc(1rem + var(--safe-left));
+  background: var(--bg);
+  border-top: 1px solid var(--line);
+}
+
+.view-pray .pray-bottom-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr);
+  gap: 0.65rem;
+  max-width: calc(var(--content-w) - 2rem);
+  margin: 0 auto;
+}
+
+.view-pray .pray-bottom .btn-lg { padding: 0 1rem; }
+
+.view-pray .pray-back { color: var(--ink); }
+
+.view-pray .pray-back:disabled { opacity: 0.4; }
+
+.view-pray .pray-next.is-amen {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- sheet (appended to body, so scoped by its own class) ---------- */
+
+.pray-sheet .pray-sheet-req {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+/* Keep toasts above the Back and Next bar while praying. */
+body:has(.view-pray) .toast-region {
+  bottom: calc(var(--pray-bottom-h, 4.75rem) + var(--safe-bottom) + 0.75rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .view-pray .pray-step { animation: none; }
+  .view-pray .pray-progress-fill,
+  .view-pray .pray-req,
+  .view-pray .pray-check,
+  .view-pray .pray-about-chev { transition: none; }
+}
