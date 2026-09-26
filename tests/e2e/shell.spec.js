@@ -53,14 +53,20 @@ test('the service worker installs and the app works offline', async ({ page, con
   // Reload once so the page is controlled by the worker.
   await page.reload();
   await expect.poll(() => page.evaluate(() => !!navigator.serviceWorker.controller)).toBe(true);
+  // setOffline alone does not stop the worker's own fetches, so every request
+  // (the worker's included) is refused. Anything missing from the precache
+  // then fails to load.
+  await context.route('**/*', (route) => route.abort('internetdisconnected'));
   await context.setOffline(true);
   await page.reload();
   await expect(page.locator('main h1').first()).toBeVisible();
-  for (const route of ['#/requests', '#/learn/wsc/98', '#/pray']) {
+  for (const route of ['#/requests', '#/ebenezer', '#/journal', '#/learn/wsc/98', '#/settings', '#/pray']) {
     await page.goto(`/${route}`);
     await expect(page.locator('main'), route).toHaveAttribute('data-path', route.slice(1));
     await expect(page.locator('main h1').first(), route).toBeVisible();
+    await expect(page.locator('main .error-card'), route).toHaveCount(0);
   }
+  await context.unrouteAll({ behavior: 'ignoreErrors' });
   await context.setOffline(false);
 });
 

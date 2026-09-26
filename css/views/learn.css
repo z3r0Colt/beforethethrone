@@ -522,6 +522,16 @@
 
 .view-learn .learn-goto { margin-bottom: 1.5rem; }
 
+.view-learn .learn-goto-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.view-learn .learn-goto-row .select { flex: 1; min-width: 0; }
+
+.view-learn .learn-goto-btn { flex: none; min-width: 4rem; }
+
 .view-learn .learn-wcf-sec,
 .view-learn .learn-wlc-q {
   position: relative;

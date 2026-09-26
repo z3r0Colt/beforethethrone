@@ -30,12 +30,6 @@
   text-transform: none;
 }
 
-/* Rows sit inside a clipped rounded list, so draw their focus ring inside. */
-.view-journal .list .list-item:focus-visible {
-  outline-offset: -3px;
-  border-radius: 12px;
-}
-
 .view-journal .jr-item {
   align-items: flex-start;
   gap: 0.85rem;
@@ -217,7 +211,7 @@
 }
 
 .view-journal .jr-optional {
-  margin-left: 0.4rem;
+  margin-left: 0.15rem;
   font-weight: 500;
   font-size: 0.85rem;
   color: var(--muted);

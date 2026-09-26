@@ -7,7 +7,7 @@ import {
   field, segmented, setTitle, renderScripture, esvLink,
 } from '../dom.js';
 import {
-  getState, getRequest, addRequest, updateRequest, deleteRequest, markAnswered,
+  getState, subscribe, getRequest, addRequest, updateRequest, deleteRequest, markAnswered,
   setStatus, addCategory, renameCategory, moveCategory, deleteCategory,
 } from '../store.js';
 import { groupByCategory, frequencyLabel, sortRequests } from '../schedule.js';
@@ -168,13 +168,81 @@ function autosize(el) {
   return fit;
 }
 
-function onRequestsRoute() {
-  return parseHash(location.hash).path.startsWith(LIST_PATH);
+// ---------- drafts (browser storage, guarded) ----------
+
+// Typing in the editor is kept as a draft until it is saved or discarded, so
+// leaving the page or closing the app does not lose it. A new request is kept
+// under 'btt:request-draft' and unsaved edits under 'btt:request-draft:<id>'.
+const DRAFT_KEY = 'btt:request-draft';
+const EDIT_DRAFT_PREFIX = `${DRAFT_KEY}:`;
+const FREQUENCIES = ['daily', 'weekdays', 'rotate'];
+
+function storage() {
+  try { return globalThis.localStorage || null; } catch { return null; }
 }
 
-// Redraws whatever requests page is showing, after an Undo for example.
-function refresh(navigate) {
-  if (onRequestsRoute()) navigate(location.hash.slice(1), { replace: true });
+function hasWords(v) {
+  return !!(v.title.trim() || v.details.trim() || v.promise.trim());
+}
+
+function readDraft(key) {
+  try {
+    const raw = storage()?.getItem(key);
+    if (!raw) return null;
+    const d = JSON.parse(raw);
+    if (!d || typeof d !== 'object') return null;
+    const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+    const draft = {
+      title: text(d.title, 200).replace(/\s*[\r\n]+\s*/g, ' '),
+      details: text(d.details, 5000),
+      promise: text(d.promise, 300),
+      categoryId: typeof d.categoryId === 'string' ? d.categoryId : null,
+      frequency: FREQUENCIES.includes(d.frequency) ? d.frequency : null,
+      weekdays: Array.isArray(d.weekdays)
+        ? [...new Set(d.weekdays.filter((n) => Number.isInteger(n) && n >= 0 && n <= 6))]
+        : [],
+    };
+    return hasWords(draft) ? draft : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key, values) {
+  try {
+    storage()?.setItem(key, JSON.stringify({ ...values, savedAt: new Date().toISOString() }));
+  } catch { /* ignore */ }
+}
+
+function removeDraft(key) {
+  try { storage()?.removeItem(key); } catch { /* ignore */ }
+}
+
+// Clears kept edits for requests that no longer exist.
+function pruneEditDrafts(requests) {
+  const store = storage();
+  if (!store) return;
+  try {
+    const live = new Set(requests.map((r) => r.id));
+    const stale = [];
+    for (let i = 0; i < store.length; i++) {
+      const k = store.key(i);
+      if (k && k.startsWith(EDIT_DRAFT_PREFIX) && !live.has(k.slice(EDIT_DRAFT_PREFIX.length))) stale.push(k);
+    }
+    stale.forEach((k) => store.removeItem(k));
+  } catch { /* ignore */ }
+}
+
+// The values a request is saved with, so two sets can be compared.
+function cleanFields(v) {
+  return {
+    title: v.title.trim(),
+    details: v.details.trim(),
+    categoryId: v.categoryId,
+    frequency: v.frequency,
+    weekdays: v.frequency === 'weekdays' ? [...v.weekdays].sort((a, b) => a - b) : [],
+    promise: v.promise.trim(),
+  };
 }
 
 // Scripture the user names as a promise. Only verses the app already quotes
@@ -240,6 +308,7 @@ function renderList(main, { query }) {
   root.append(head);
 
   const state = getState();
+  pruneEditDrafts(state.requests);
   if (!state.requests.length) {
     const verse = getVerse('Psalm 62:8');
     root.append(h('div', { class: 'card req-welcome' },
@@ -436,7 +505,11 @@ function renderList(main, { query }) {
     const br = selected.btn.getBoundingClientRect();
     chips.scrollLeft += (br.left - cr.left) - (cr.width - br.width) / 2;
   }
-  return undefined;
+
+  // Keep the list in step with changes made elsewhere, such as an Undo.
+  return subscribe(() => {
+    if (parseHash(location.hash).path === LIST_PATH) draw();
+  });
 }
 
 function requestRow(r) {
@@ -453,7 +526,8 @@ function requestRow(r) {
 
 // ---------- the editor ----------
 
-function renderNotFound(main) {
+function renderNotFound(main, id) {
+  removeDraft(`${EDIT_DRAFT_PREFIX}${id}`);
   setTitle('Request not found');
   main.append(h('div', { class: 'view-requests req-missing' },
     pageTitle('Request not found'),
@@ -470,7 +544,7 @@ function renderNotFound(main) {
 function renderEditor(main, { query, navigate, path }, id) {
   const isNew = id === null;
   const existing = isNew ? null : getRequest(id);
-  if (!isNew && !existing) return renderNotFound(main);
+  if (!isNew && !existing) return renderNotFound(main, id);
 
   // Save, Cancel and Delete step back to wherever the user came from (the
   // list with its filters, or Today). After a reload there is no such page,
@@ -485,15 +559,28 @@ function renderEditor(main, { query, navigate, path }, id) {
 
   setTitle(isNew ? 'New Request' : 'Edit Request');
 
-  const draft = {
+  // The saved request, or a blank one. A kept draft is laid over it below.
+  const base = {
+    title: existing ? existing.title : '',
+    details: existing ? existing.details || '' : '',
     categoryId: existing ? existing.categoryId : defaultCategoryId(query.category),
     frequency: existing ? existing.frequency : 'daily',
-    weekdays: new Set(existing ? existing.weekdays : []),
+    weekdays: existing ? existing.weekdays : [],
+    promise: existing ? existing.promise || '' : '',
+  };
+  const draftKey = isNew ? DRAFT_KEY : `${EDIT_DRAFT_PREFIX}${id}`;
+  let finished = false;
+  let draftTimer = null;
+
+  const draft = {
+    categoryId: base.categoryId,
+    frequency: base.frequency,
+    weekdays: new Set(base.weekdays),
   };
 
   // Title: a one-line textarea that grows, so a long title stays in view.
   const titleInput = h('textarea', {
-    class: 'input req-title-input', rows: '1', value: existing ? existing.title : '', maxlength: '200',
+    class: 'input req-title-input', rows: '1', value: base.title, maxlength: '200',
     required: true, autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'done',
     spellcheck: 'true', placeholder: 'A person or a need',
   });
@@ -518,10 +605,10 @@ function renderEditor(main, { query, navigate, path }, id) {
 
   // Details
   const detailsInput = h('textarea', {
-    class: 'textarea req-details-input', rows: '4', maxlength: '5000', value: existing ? existing.details : '',
+    class: 'textarea req-details-input', rows: '4', maxlength: '5000', value: base.details,
     autocapitalize: 'sentences',
   });
-  const detailsField = field(['Details', h('span', { class: 'req-optional' }, 'optional')], detailsInput, {
+  const detailsField = field(['Details', ' ', h('span', { class: 'req-optional' }, '(optional)')], detailsInput, {
     hint: 'Anything that will help you pray with understanding.',
   });
   const fitDetails = autosize(detailsInput);
@@ -573,6 +660,7 @@ function renderEditor(main, { query, navigate, path }, id) {
       }
       draft.categoryId = chosen.id;
       fillCategories();
+      scheduleDraft();
       handle.close();
       toast(same ? `“${chosen.name}” is already one of your categories, so it is selected.` : `Added the category “${chosen.name}”.`);
     };
@@ -602,7 +690,7 @@ function renderEditor(main, { query, navigate, path }, id) {
       { value: 'weekdays', label: 'Certain days' },
       { value: 'rotate', label: 'Rotation' },
     ],
-    onChange: (v) => { draft.frequency = v; updateFrequency(); },
+    onChange: (v) => { draft.frequency = v; updateFrequency(); scheduleDraft(); },
   });
   seg.removeAttribute('aria-label');
   seg.setAttribute('aria-labelledby', freqLabelId);
@@ -618,6 +706,7 @@ function renderEditor(main, { query, navigate, path }, id) {
       else draft.weekdays.add(d);
       e.currentTarget.setAttribute('aria-pressed', String(draft.weekdays.has(d)));
       if (draft.weekdays.size) clearError(null, daysErr, dayPicker);
+      scheduleDraft();
     },
   },
   h('span', { class: 'req-wd-long', 'aria-hidden': 'true' }, weekdayName(d, 'short')),
@@ -642,10 +731,10 @@ function renderEditor(main, { query, navigate, path }, id) {
 
   // Promise
   const promiseInput = h('input', {
-    class: 'input', type: 'text', maxlength: '300', value: existing ? existing.promise : '',
+    class: 'input', type: 'text', maxlength: '300', value: base.promise,
     autocomplete: 'off', enterkeyhint: 'done',
   });
-  const promiseField = field(['Promise', h('span', { class: 'req-optional' }, 'optional')], promiseInput, {
+  const promiseField = field(['Promise', ' ', h('span', { class: 'req-optional' }, '(optional)')], promiseInput, {
     hint: 'A Scripture promise you are pleading, like Philippians 4:19.',
   });
   const preview = h('div', { class: 'req-promise-preview', 'aria-live': 'polite' });
@@ -659,16 +748,67 @@ function renderEditor(main, { query, navigate, path }, id) {
   promiseField.append(preview);
 
   // Form
-  const fields = () => ({
-    title: titleInput.value.trim(),
-    details: detailsInput.value.trim(),
+  const current = () => ({
+    title: titleInput.value,
+    details: detailsInput.value,
     categoryId: draft.categoryId,
     frequency: draft.frequency,
-    weekdays: draft.frequency === 'weekdays' ? [...draft.weekdays].sort((a, b) => a - b) : [],
-    promise: promiseInput.value.trim(),
+    weekdays: [...draft.weekdays],
+    promise: promiseInput.value,
   });
+  const fields = () => cleanFields(current());
   const initial = JSON.stringify(fields());
   const isDirty = () => JSON.stringify(fields()) !== initial;
+
+  function applyValues(v) {
+    titleInput.value = v.title;
+    detailsInput.value = v.details;
+    promiseInput.value = v.promise;
+    draft.categoryId = v.categoryId;
+    select.value = v.categoryId;
+    draft.frequency = v.frequency;
+    draft.weekdays = new Set(v.weekdays);
+    for (const b of seg.querySelectorAll('button')) b.setAttribute('aria-pressed', String(b.dataset.value === v.frequency));
+    dayButtons.forEach((b, d) => b.setAttribute('aria-pressed', String(draft.weekdays.has(d))));
+    updateFrequency();
+    updatePreview();
+  }
+
+  // Bring back what was typed here and left unsaved.
+  const stored = readDraft(draftKey);
+  let restored = false;
+  if (stored) {
+    applyValues({
+      ...stored,
+      categoryId: getState().categories.some((c) => c.id === stored.categoryId) ? stored.categoryId : base.categoryId,
+      frequency: stored.frequency || base.frequency,
+    });
+    restored = isDirty();
+    if (!restored) {
+      applyValues(base);
+      removeDraft(draftKey);
+    }
+  }
+
+  function saveDraftNow() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    if (finished) return;
+    const v = current();
+    if (isDirty() && hasWords(v)) writeDraft(draftKey, v);
+    else removeDraft(draftKey);
+  }
+  function scheduleDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraftNow, 400);
+  }
+  // Once saved, discarded, or moved elsewhere, the draft is no longer needed.
+  function dropDraft() {
+    finished = true;
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    removeDraft(draftKey);
+  }
 
   function validate({ focus = true } = {}) {
     let first = null;
@@ -705,6 +845,7 @@ function renderEditor(main, { query, navigate, path }, id) {
       toast(error.message || 'Could not save this request.');
       return;
     }
+    dropDraft();
     leave();
   }
 
@@ -719,6 +860,7 @@ function renderEditor(main, { query, navigate, path }, id) {
       });
       if (!discard) return;
     }
+    dropDraft();
     leave();
   }
 
@@ -727,6 +869,11 @@ function renderEditor(main, { query, navigate, path }, id) {
     h('div', { class: 'req-form-actions' },
       h('button', { type: 'submit', class: 'btn btn-primary' }, icon('check'), 'Save'),
       h('button', { type: 'button', class: 'btn btn-ghost', onClick: cancel }, 'Cancel')));
+  form.addEventListener('input', scheduleDraft);
+  form.addEventListener('change', scheduleDraft);
+  const onHide = () => { if (document.visibilityState === 'hidden') saveDraftNow(); };
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', saveDraftNow);
 
   const back = backLink(`#${fromList ? lastListPath : LIST_PATH}`, 'Requests');
   back.addEventListener('click', (e) => {
@@ -745,6 +892,14 @@ function renderEditor(main, { query, navigate, path }, id) {
       h('span', null, 'This request is archived. Restore it to pray for it again.')));
   }
 
+  if (restored) {
+    root.append(h('div', { class: 'req-restored', role: 'note' },
+      icon('restore', { className: 'req-restored-icon' }),
+      h('p', null, isNew
+        ? 'Your unfinished request was kept, so you can pick up where you left off.'
+        : 'Your unsaved changes to this request were kept, so you can pick up where you left off.')));
+  }
+
   root.append(form);
   if (existing) root.append(historySection(existing));
   if (existing) root.append(actionsSection(existing));
@@ -755,7 +910,12 @@ function renderEditor(main, { query, navigate, path }, id) {
   const onResize = () => { fitTitle(); fitDetails(); };
   window.addEventListener('resize', onResize);
   if (isNew) titleInput.focus();
-  return () => window.removeEventListener('resize', onResize);
+  return () => {
+    window.removeEventListener('resize', onResize);
+    document.removeEventListener('visibilitychange', onHide);
+    window.removeEventListener('pagehide', saveDraftNow);
+    saveDraftNow();
+  };
 
   // ----- pieces for an existing request -----
 
@@ -795,9 +955,10 @@ function renderEditor(main, { query, navigate, path }, id) {
         hint: 'Set it aside for a season',
         onClick: () => {
           commitIfDirty();
+          dropDraft();
           setStatus(r.id, 'archived');
           toast('Archived. You can restore it at any time.', {
-            action: { label: 'Undo', onClick: () => { setStatus(r.id, 'active'); refresh(navigate); } },
+            action: { label: 'Undo', onClick: () => setStatus(r.id, 'active') },
           });
           leave();
         },
@@ -809,6 +970,7 @@ function renderEditor(main, { query, navigate, path }, id) {
         hint: 'Return it to your active list',
         onClick: () => {
           commitIfDirty();
+          dropDraft();
           setStatus(r.id, 'active');
           toast('Restored to your active list.');
           leave();
@@ -827,6 +989,7 @@ function renderEditor(main, { query, navigate, path }, id) {
           danger: true,
         });
         if (!ok) return;
+        dropDraft();
         deleteRequest(r.id);
         toast('Request deleted.');
         leave();
@@ -855,6 +1018,7 @@ function renderEditor(main, { query, navigate, path }, id) {
           variant: 'primary',
           onClick: (close) => {
             commitIfDirty();
+            dropDraft();
             markAnswered(r.id, note.value);
             close();
             toast('Thanks be to God. It is set on your Ebenezer.');

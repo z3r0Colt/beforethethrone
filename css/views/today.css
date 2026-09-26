@@ -224,6 +224,14 @@
 
 .view-today .today-requests .empty { padding: 1.25rem 0.5rem 0.75rem; }
 
+.view-today .today-req-look { margin: 0.75rem 0 0; }
+
+.view-today .today-req-look a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
 /* ---------- verse ---------- */
 
 .view-today .today-verse .scripture { margin-top: 0.35rem; }

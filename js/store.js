@@ -28,6 +28,7 @@ function safeLocalStorage() {
 let storage = safeLocalStorage();
 let state = null;
 let persistRequested = false;
+let lastPersistOk = true;
 const listeners = new Set();
 
 // ---------- small helpers ----------
@@ -249,15 +250,18 @@ function emitStorageError(error) {
 
 function persist() {
   if (!storage) {
+    lastPersistOk = false;
     emitStorageError(new Error('Storage is not available'));
     return false;
   }
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
+    lastPersistOk = false;
     emitStorageError(error);
     return false;
   }
+  lastPersistOk = true;
   if (!persistRequested) {
     persistRequested = true;
     try {
@@ -324,10 +328,22 @@ export function update(mutator) {
   return s;
 }
 
+// Whether the most recent change reached the device's storage. A change always
+// takes effect in memory, so a caller that tells the user "saved" checks this.
+export function lastSaveOk() {
+  return lastPersistOk;
+}
+
+// Tries once more to write the current state, as after freeing some room.
+export function saveAgain() {
+  return persist();
+}
+
 export function _setStorageForTests(fake) {
   storage = fake;
   state = null;
   persistRequested = true;
+  lastPersistOk = true;
   listeners.clear();
 }
 
@@ -405,7 +421,13 @@ export function markAnswered(id, note = '', when = new Date()) {
     if (!r) return;
     r.status = 'answered';
     r.answeredAt = new Date(when).toISOString();
-    r.answerNote = str(note, LIMITS.note).trim();
+    // A request prayed for again keeps its earlier answer note. Answering it
+    // again adds the new words after the old, and a blank note keeps the old.
+    const next = str(note, LIMITS.note).trim();
+    const prev = (r.answerNote || '').trim();
+    if (!next) r.answerNote = prev;
+    else if (!prev || next.includes(prev)) r.answerNote = next;
+    else r.answerNote = `${prev}\n\n${next}`.slice(0, LIMITS.note);
     r.updatedAt = new Date().toISOString();
   });
 }
@@ -508,17 +530,28 @@ export function recordSession(session) {
 // ---------- the day's rotation ----------
 
 // The rotating requests for today. The plan is computed once per day (and again
-// if the user changes how many to pray), then cached so it holds steady.
+// if the user changes how many to pray), then cached so it holds steady. Free
+// places in the day's plan are filled by rotating requests added or changed
+// later that day, so a new one need not wait until tomorrow.
 export function todaysRotation(date = new Date()) {
   const s = getState();
   const key = dayKey(date);
   const count = s.settings.rotationCount;
   const live = new Map(s.requests.map((r) => [r.id, r]));
   if (s.rotation.date === key && s.rotation.count === count) {
-    return s.rotation.ids.filter((id) => {
+    const kept = s.rotation.ids.filter((id) => {
       const r = live.get(id);
       return r && r.status === 'active' && r.frequency === 'rotate';
     });
+    if (kept.length >= count) return kept;
+    const keptSet = new Set(kept);
+    const extra = computeRotation(s.requests.filter((r) => !keptSet.has(r.id)), count - kept.length);
+    // Nothing to add: return without writing, so re-renders (and other tabs)
+    // do not trade storage writes back and forth.
+    if (!extra.length) return kept;
+    const ids = [...kept, ...extra];
+    update((st) => { st.rotation = { date: key, ids, count }; });
+    return ids;
   }
   const ids = computeRotation(s.requests, count);
   update((st) => { st.rotation = { date: key, ids, count }; });
@@ -538,13 +571,22 @@ export function replaceState(next) {
 // saved prayer progress. Erasing everything removes these too.
 const APP_KEY_PREFIXES = ['btt:', 'beforethethrone:'];
 
-function removeAppKeys(store) {
+function removeAppKeys(store, keep = null) {
   if (!store) return;
   try {
     const keys = [];
     for (let i = 0; i < (store.length || 0); i++) keys.push(store.key(i));
-    keys.filter((k) => k && APP_KEY_PREFIXES.some((p) => k.startsWith(p))).forEach((k) => store.removeItem(k));
+    keys
+      .filter((k) => k && k !== keep && APP_KEY_PREFIXES.some((p) => k.startsWith(p)))
+      .forEach((k) => store.removeItem(k));
   } catch { /* ignore */ }
+}
+
+// After everything was erased in another tab: removes the drafts and saved
+// prayer progress this tab still holds, keeping only the (fresh) main state.
+export function forgetLocalCopies() {
+  removeAppKeys(storage, STORAGE_KEY);
+  try { removeAppKeys(globalThis.sessionStorage); } catch { /* ignore */ }
 }
 
 export function resetAll() {

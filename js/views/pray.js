@@ -2,6 +2,8 @@
 // One step at a time, from "Draw near" to "Amen". Requests due today are
 // placed in the step where they belong, and progress is kept in
 // sessionStorage so a stray reload or a quick trip elsewhere loses nothing.
+// Progress left from another method or an earlier day is recorded before a
+// new time of prayer begins, so it is never simply overwritten.
 
 import {
   h, icon, renderScripture, esvLink, pageTitle, emptyState, toast, openSheet,
@@ -11,8 +13,8 @@ import {
   getState, markPrayed, markAnswered, recordSession, addJournal, todaysRotation,
 } from '../store.js';
 import { dueToday, groupByCategory, sortRequests } from '../schedule.js';
-import { dayKey, dayOfYear, isLordsDay, formatShort } from '../dates.js';
-import { getVerse } from '../data/scripture.js';
+import { dayKey, parseDayKey, dayOfYear, isLordsDay, formatShort } from '../dates.js';
+import { getVerse, VERSES } from '../data/scripture.js';
 import * as catechism from '../data/catechism.js';
 import * as guides from '../data/guides.js';
 
@@ -47,7 +49,46 @@ function validIso(v) {
   return Number.isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+// Records progress saved by another method or on an earlier day, just as
+// ending that time of prayer would have. Returns what was kept, or null.
+function keepEarlier(saved, now) {
+  const live = new Set(getState().requests.map((r) => r.id));
+  const ids = Array.isArray(saved.checked)
+    ? [...new Set(saved.checked.filter((id) => typeof id === 'string' && live.has(id)))]
+    : [];
+  const text = typeof saved.note === 'string' ? saved.note.trim() : '';
+  if (!ids.length && !text) return null;
+  const m = guides.getMethod(saved.method);
+  const startedAt = validIso(saved.startedAt) || now.toISOString();
+  const finishedAt = validIso(saved.savedAt) || startedAt;
+  const date = parseDayKey(saved.dayKey) ? saved.dayKey : dayKey(new Date(startedAt));
+  if (ids.length) markPrayed(ids, finishedAt);
+  recordSession({ method: m.id, startedAt, finishedAt, prayedIds: ids, date });
+  if (text) addJournal({ kind: 'session', title: m.name, text, date });
+  return { note: Boolean(text) };
+}
+
 // ---------- content helpers ----------
+
+// A promise is matched to a quoted verse the same way the request editor
+// matches it, so the Scripture shown while writing is shown while praying.
+const REF_INDEX = new Map(VERSES.map((v) => [v.ref.toLowerCase(), v.ref]));
+const REF_PATTERN = /^(?:[1-3] ?)?[A-Za-z]+(?: of [A-Za-z]+| [A-Za-z]+)? \d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?$/;
+
+function cleanRef(text) {
+  return String(text || '')
+    .trim()
+    .replace(/[\u2013\u2014]/g, '-')
+    .replace(/\s*-\s*/g, '-')
+    .replace(/\s*:\s*/g, ':')
+    .replace(/\s+/g, ' ')
+    .replace(/[.,;]+$/, '');
+}
+
+function promiseVerse(ref) {
+  const known = REF_INDEX.get(ref.toLowerCase().replace(/^psalms /, 'psalm '));
+  return known ? getVerse(known) : null;
+}
 
 function promptsOf(step) {
   if (Array.isArray(step.prompts)) return step.prompts.filter(Boolean);
@@ -166,8 +207,25 @@ function recentAnswered(state, limit = 5) {
 export function render(main, { query = {}, navigate } = {}) {
   const now = new Date();
   const today = dayKey(now);
+  const method = guides.getMethod(query.method || getState().settings.method);
+
+  // Restore progress only for the same method on the same day. Any other
+  // saved progress is recorded first, so its marks and note are kept.
+  let saved = readSaved();
+  const resume = Boolean(saved) && saved.method === method.id && saved.dayKey === today;
+  let keptEarlier = null;
+  if (saved && !resume) {
+    try {
+      keptEarlier = keepEarlier(saved, now);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      clearSaved();
+      saved = null;
+    }
+  }
+
   const state = getState();
-  const method = guides.getMethod(query.method || state.settings.method);
   const steps = buildSteps(method, now);
   const categories = state.categories;
 
@@ -180,9 +238,6 @@ export function render(main, { query = {}, navigate } = {}) {
   const stepRequests = assignRequests(method, steps, requests, categories);
   const knownIds = new Set(state.requests.map((r) => r.id));
 
-  // Restore progress only for the same method on the same day.
-  const saved = readSaved();
-  const resume = saved && saved.method === method.id && saved.dayKey === today;
   let index = resume ? Math.min(Math.max(0, Math.floor(Number(saved.step) || 0)), steps.length - 1) : 0;
   const checked = new Set(resume && Array.isArray(saved.checked)
     ? saved.checked.filter((id) => typeof id === 'string' && knownIds.has(id)) : []);
@@ -200,7 +255,10 @@ export function render(main, { query = {}, navigate } = {}) {
 
   function save() {
     if (done) return;
-    writeSaved({ method: method.id, dayKey: sessionDay, step: index, checked: [...checked], note, startedAt });
+    writeSaved({
+      method: method.id, dayKey: sessionDay, step: index, checked: [...checked], note, startedAt,
+      savedAt: new Date().toISOString(),
+    });
   }
 
   setTitle('Pray');
@@ -247,12 +305,15 @@ export function render(main, { query = {}, navigate } = {}) {
   function renderPromise(text, describedIds) {
     const id = nextId('promise');
     describedIds.push(id);
-    const verse = getVerse(text.trim());
+    const ref = cleanRef(text);
+    const verse = ref ? promiseVerse(ref) : null;
+    let shown;
+    if (verse) shown = renderScripture(verse, { className: 'pray-promise-verse' });
+    else if (REF_PATTERN.test(ref) && ref.length <= 40) shown = h('p', { class: 'pray-promise-text' }, 'Read ', esvLink(ref), ' on esv.org');
+    else shown = h('p', { class: 'pray-promise-text' }, text);
     return h('div', { class: 'pray-req-promise', id },
       h('span', { class: 'pray-req-label' }, 'Pleading'),
-      verse
-        ? renderScripture(verse, { className: 'pray-promise-verse' })
-        : h('p', { class: 'pray-promise-text' }, text));
+      shown);
   }
 
   function setRowState(li, btn, on) {
@@ -271,6 +332,7 @@ export function render(main, { query = {}, navigate } = {}) {
     }
     if (r.promise && r.promise.trim()) body.push(renderPromise(r.promise, describedIds));
 
+    const titleId = nextId('title');
     const btn = h('button', {
       type: 'button',
       class: 'pray-req-toggle',
@@ -284,7 +346,9 @@ export function render(main, { query = {}, navigate } = {}) {
       },
     },
     h('span', { class: 'pray-check', 'aria-hidden': 'true' }, icon('check')),
-    h('span', { class: 'pray-req-title' }, h('span', { class: 'visually-hidden' }, 'Prayed for '), r.title));
+    h('span', { class: 'pray-req-title' },
+      h('span', { class: 'visually-hidden' }, 'Prayed for '),
+      h('span', { id: titleId }, r.title)));
 
     const stateTag = h('span', { class: 'pray-req-state', 'aria-hidden': 'true' }, 'Prayed');
     const isAnswered = r.status === 'answered' || answeredHere.has(r.id);
@@ -295,7 +359,7 @@ export function render(main, { query = {}, navigate } = {}) {
         : h('button', {
           type: 'button',
           class: 'pray-req-answer',
-          'aria-label': `Mark “${r.title}” answered`,
+          'aria-describedby': titleId,
           onClick: () => openAnswered(r, li),
         }, 'Mark answered'));
 
@@ -349,7 +413,9 @@ export function render(main, { query = {}, navigate } = {}) {
     const groups = groupByCategory(list, categories);
     return h('section', { class: 'pray-requests', 'aria-labelledby': headId },
       h('h2', { class: 'section-title', id: headId }, list.length === 1 ? 'Your request' : 'Your requests'),
-      h('p', { class: 'pray-hint' }, 'Tap each one when you have prayed for it.'),
+      h('p', { class: 'pray-hint' }, list.length === 1
+        ? 'Tap it when you have prayed for it.'
+        : 'Tap each one when you have prayed for it.'),
       groups.map((g) => h('div', { class: 'pray-group' },
         h('h3', { class: 'pray-group-title' },
           h('span', null, g.category.name),
@@ -390,7 +456,7 @@ export function render(main, { query = {}, navigate } = {}) {
   function aboutBlock() {
     if (!method.description) return null;
     return h('details', { class: 'pray-about' },
-      h('summary', null, h('span', null, `About ${method.name}`), icon('down', { className: 'pray-about-chev' })),
+      h('summary', null, h('span', null, `About ${method.name.replace(/^The /, 'the ')}`), icon('down', { className: 'pray-about-chev' })),
       h('p', null, method.description));
   }
 
@@ -588,7 +654,11 @@ export function render(main, { query = {}, navigate } = {}) {
 
   // ----- first paint -----
   show();
-  if (resume && worthKeeping()) {
+  if (keptEarlier) {
+    toast(keptEarlier.note
+      ? 'Your earlier time of prayer was kept. Its note is in your journal.'
+      : 'Your earlier time of prayer was kept.');
+  } else if (resume && worthKeeping()) {
     toast('Picking up where you left off.');
   }
   save();

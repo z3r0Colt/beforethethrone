@@ -58,6 +58,7 @@
     --accent-ink: #0e131b;
     --accent-soft: #22324a;
     --gold: #d6b560;
+    --gold-ink: #d6b560;
     --gold-soft: #3a3222;
     --danger: #e38b8b;
     --success: #86c79d;
@@ -95,6 +96,16 @@ html[data-textsize="larger"] { font-size: 125%; }
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  /* Keeps the focused control and the line being typed clear of the sticky
+     header and the fixed tab bar when the browser scrolls them into view. */
+  scroll-padding-top: calc(var(--header-h) + var(--safe-top) + 0.5rem);
+  scroll-padding-bottom: calc(var(--tabbar-h) + var(--safe-bottom) + 0.75rem);
+}
+
+/* The prayer screen has its own top bar and a fixed Back and Next bar. */
+html:has(> body.focus-mode) {
+  scroll-padding-top: calc(3.5rem + var(--safe-top) + 0.75rem);
+  scroll-padding-bottom: calc(4.75rem + var(--safe-bottom) + 0.75rem);
 }
 
 body {
@@ -173,6 +184,7 @@ ul, ol { padding-left: 1.25rem; }
   margin: 0;
   display: flex;
   align-items: center;
+  min-height: 44px;
   gap: 0.5rem;
   font-family: var(--serif);
   font-size: 1.15rem;
@@ -590,6 +602,8 @@ body.focus-mode .app-main {
   height: 32px;
   border-radius: 999px;
   background: var(--line);
+  /* About 3.5:1 against the card, so the switch and its knob stand out. */
+  background: color-mix(in srgb, var(--muted) 75%, var(--surface));
   transition: background-color 0.15s ease;
   pointer-events: none;
 }
@@ -625,7 +639,7 @@ body.focus-mode .app-main {
 .seg button {
   flex: 1 1 0;
   min-width: min-content;
-  min-height: 40px;
+  min-height: 44px;
   overflow-wrap: normal;
   word-break: normal;
   padding: 0.25rem 0.4rem;
@@ -714,6 +728,12 @@ body.focus-mode .app-main {
 a.list-item:hover,
 button.list-item:hover { background: var(--surface-2); }
 
+/* .list clips its corners, so the focus ring is drawn inside the row. */
+.list .list-item:focus-visible {
+  outline-offset: -3px;
+  border-radius: 12px;
+}
+
 .list-item .grow { flex: 1; min-width: 0; }
 
 .list-item .item-title {
@@ -772,8 +792,8 @@ button.list-item:hover { background: var(--surface-2); }
 .scripture-ref {
   display: inline-flex;
   align-items: center;
-  min-height: 32px;
-  margin-top: 0.15rem;
+  min-height: 44px;
+  margin-top: 0;
   font-family: var(--sans);
   font-size: 0.8rem;
   font-weight: 600;
@@ -921,7 +941,7 @@ body.focus-mode .toast-region { bottom: calc(6rem + var(--safe-bottom)); }
 
 .toast-action {
   flex: none;
-  min-height: 36px;
+  min-height: 44px;
   padding: 0 0.6rem;
   border: 0;
   border-radius: 8px;

@@ -51,6 +51,16 @@ export function currentPath() {
   return parseHash(location.hash).path;
 }
 
+// True while the current view holds input the user has not saved. A view says
+// so by giving its cleanup function a hasUnsaved() method.
+export function hasUnsavedInput() {
+  try {
+    return !!(cleanup && typeof cleanup.hasUnsaved === 'function' && cleanup.hasUnsaved());
+  } catch {
+    return false;
+  }
+}
+
 export function navigate(path, { replace = false } = {}) {
   const target = `#${path.startsWith('/') ? path : `/${path}`}`;
   if (replace) {

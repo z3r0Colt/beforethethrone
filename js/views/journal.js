@@ -518,7 +518,7 @@ function renderEditor(main, { navigate, path }, id) {
     autocomplete: 'off', autocapitalize: 'sentences', enterkeyhint: 'next', spellcheck: 'true',
     placeholder: existing && existing.kind === 'session' ? 'Prayer time' : null,
   });
-  const titleField = field(['Title', h('span', { class: 'jr-optional' }, 'optional')], titleInput, { className: 'jr-field-title' });
+  const titleField = field(['Title', ' ', h('span', { class: 'jr-optional' }, '(optional)')], titleInput, { className: 'jr-field-title' });
 
   const textInput = h('textarea', {
     class: 'textarea jr-text', rows: '10', value: start.text, maxlength: String(LIMITS.text),

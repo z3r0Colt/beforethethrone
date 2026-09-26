@@ -184,15 +184,26 @@ export function render(main, { navigate } = {}) {
     const active = state.requests.filter((r) => r.status === 'active');
 
     if (!active.length) {
-      const action = onboarding
+      // Answered and archived requests still count as having requests.
+      const hasAny = state.requests.length > 0;
+      const answered = state.requests.some((r) => r.status === 'answered');
+      const add = onboarding
         ? null
-        : h('a', { class: 'btn btn-primary', href: '#/requests/new' }, icon('plus'), h('span', null, 'Add your first request'));
+        : h('a', { class: 'btn btn-primary', href: '#/requests/new' }, icon('plus'),
+          h('span', null, hasAny ? 'Add a request' : 'Add your first request'));
+      const look = hasAny
+        ? h('p', { class: 'today-req-look small' }, answered
+          ? h('a', { href: '#/ebenezer' }, 'See your answered prayers')
+          : h('a', { href: '#/requests?status=archived' }, 'See your archived requests'))
+        : null;
       return card('today-requests', title, prayedLine,
         emptyState({
           iconName: 'requests',
-          title: 'No requests yet',
-          text: 'Write down the people and needs you want to bring to the Lord. They will be waiting for you here each day.',
-          action,
+          title: hasAny ? 'No active requests' : 'No requests yet',
+          text: hasAny
+            ? 'Your earlier requests are kept safe. Add a new request whenever you have a need to bring to the Lord.'
+            : 'Write down the people and needs you want to bring to the Lord. They will be waiting for you here each day.',
+          action: add || look ? [add, look] : null,
         }));
     }
 

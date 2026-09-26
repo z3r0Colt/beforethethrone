@@ -8,6 +8,8 @@ export function fakeStorage(initial = {}) {
     setItem: (k, v) => { map.set(k, String(v)); },
     removeItem: (k) => { map.delete(k); },
     clear: () => map.clear(),
+    key: (i) => [...map.keys()][i] ?? null,
+    get length() { return map.size; },
     _map: map,
   };
 }

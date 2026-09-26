@@ -53,6 +53,15 @@ test('manifest icons exist and include a maskable icon', () => {
   for (const icon of manifest.icons) assert.ok(existsSync(join(root, icon.src)), icon.src);
   assert.ok(manifest.icons.some((i) => i.sizes === '192x192'));
   assert.ok(manifest.icons.some((i) => i.sizes === '512x512'));
+  // A relative id resolves against the origin, not the app's folder, so on a
+  // shared github.io host it would collide with other apps.
+  assert.ok(!('id' in manifest) || !['./', '/', '.', ''].includes(manifest.id), 'manifest id must not resolve to the origin root');
+});
+
+test('the service worker names its cache after its own folder', () => {
+  assert.match(sw, /const PREFIX = `btt-\$\{SCOPE\}-`;/);
+  assert.ok(sw.includes('k.startsWith(PREFIX) && k !== CACHE'), 'activate deletes only this app\'s old caches');
+  assert.ok(!sw.includes("startsWith('btt-')"));
 });
 
 test('no source file uses a relative path that escapes a sub-path deploy', () => {

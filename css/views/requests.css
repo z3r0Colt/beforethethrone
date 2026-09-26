@@ -84,12 +84,6 @@
   color: var(--muted);
 }
 
-/* Rows sit inside a clipped rounded list, so draw their focus ring inside. */
-.view-requests .list .list-item:focus-visible {
-  outline-offset: -3px;
-  border-radius: 12px;
-}
-
 .view-requests .req-item {
   align-items: flex-start;
 }
@@ -211,7 +205,7 @@
 }
 
 .view-requests .req-optional {
-  margin-left: 0.45rem;
+  margin-left: 0.2rem;
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--muted);
@@ -323,6 +317,26 @@
 
 .view-requests .req-status-note .icon { color: var(--muted); }
 .view-requests .req-status-note .icon svg { width: 20px; height: 20px; }
+
+.view-requests .req-restored {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-sm);
+  background: var(--gold-soft);
+}
+
+.view-requests .req-restored p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.925rem;
+}
+
+.view-requests .req-restored-icon { flex: none; color: var(--gold); }
+.view-requests .req-restored-icon svg { width: 20px; height: 20px; }
 
 .view-requests .req-answered {
   margin: 0 0 1rem;

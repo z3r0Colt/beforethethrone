@@ -1,8 +1,7 @@
 {
-  "id": "./",
   "name": "Before the Throne",
   "short_name": "Prayer",
-  "description": "A prayer companion for Reformed Presbyterians. Pray by the pattern Christ gave, keep your requests before the Lord, and remember how he has helped.",
+  "description": "A prayer companion for Reformed Presbyterians. It leads you through prayer by the pattern Christ gave and keeps a record of how the Lord has answered.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "./#/today",

@@ -667,7 +667,7 @@ function renderWcf(main, { query }) {
       'data-n': String(s.n),
       'aria-label': `Section ${s.n}`,
       'aria-current': 'false',
-      onClick: () => jumpTo(s.n, { smooth: true }),
+      onClick: () => jumpTo(s.n, { smooth: true, focus: true }),
     }, String(s.n)))));
 
   main.append(page('learn-wcf',
@@ -744,9 +744,13 @@ function renderWlc(main, { query }) {
     markTarget(container, el, opts);
   };
 
+  // The jump waits for Go or Enter. Arrowing through a closed select fires
+  // change on every step, and moving the page then would lose the reader.
+  const go = () => { if (select.value) jumpTo(Number(select.value), { smooth: true, focus: true }); };
   const select = h('select', {
     class: 'select',
-    onChange: (e) => { if (e.target.value) jumpTo(Number(e.target.value), { smooth: true }); },
+    // Read the value after the key is handled, so an open list commits first.
+    onKeydown: (e) => { if (e.key === 'Enter') setTimeout(go, 0); },
   },
   h('option', { value: '' }, 'Choose a question'),
   all.map((q) => h('option', { value: String(q.n) }, `${q.n}. ${q.q}`)));
@@ -759,7 +763,11 @@ function renderWlc(main, { query }) {
     pageTitle('The Larger Catechism on Prayer', { subtitle: 'Questions 178–196' }),
     h('p', { class: 'learn-intro' }, 'The Larger Catechism was written to help ministers teach the faith. Its answers on prayer are full and searching, and they reward slow reading. Take one question at a time.'),
     all.length
-      ? h('div', { class: 'field learn-goto' }, h('label', { class: 'label', for: selectId }, 'Go to a question'), select)
+      ? h('div', { class: 'field learn-goto' },
+        h('label', { class: 'label', for: selectId }, 'Go to a question'),
+        h('div', { class: 'learn-goto-row' },
+          select,
+          h('button', { type: 'button', class: 'btn learn-goto-btn', onClick: go }, 'Go')))
       : null,
     extNote(ext),
     all.length ? container : emptyState({ title: 'Not available', text: 'The text of these questions could not be loaded.' }),

@@ -312,7 +312,9 @@ export function render(main, { query } = {}) {
   async function remove(r) {
     const ok = await confirmTracked({
       title: 'Delete this answered prayer?',
-      message: `“${r.title}” and the note about its answer will be removed from this device. This cannot be undone.`,
+      message: (r.answerNote || '').trim()
+        ? `“${r.title}” and the note about its answer will be removed from this device. This cannot be undone.`
+        : `“${r.title}” will be removed from this device. This cannot be undone.`,
       confirmLabel: 'Delete',
       danger: true,
     });

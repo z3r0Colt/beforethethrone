@@ -194,10 +194,32 @@ export function toast(message, { action, timeout } = {}) {
     document.body.appendChild(region);
   }
   const el = h('div', { class: 'toast' }, h('span', { class: 'toast-text' }, message));
+  const ms = timeout ?? (action ? 8000 : 3500);
+  let timer = null;
+  let removed = false;
   const remove = () => {
+    if (removed) return;
+    removed = true;
+    clearTimeout(timer);
     el.classList.add('leaving');
-    setTimeout(() => el.remove(), 200);
+    setTimeout(() => {
+      // Never let focus fall to the page body when the toast goes away.
+      if (el.contains(document.activeElement)) {
+        const back = document.querySelector('#main .page-title[tabindex="-1"]') || document.getElementById('main');
+        if (back) back.focus({ preventScroll: true });
+      }
+      el.remove();
+    }, 200);
   };
+  // The countdown waits while the pointer rests on the toast or focus is in
+  // it, so there is time to reach and use its button.
+  const arm = () => {
+    clearTimeout(timer);
+    if (removed || ms <= 0) return;
+    if (el.matches(':hover') || el.contains(document.activeElement)) return;
+    timer = setTimeout(remove, ms);
+  };
+  const pause = () => clearTimeout(timer);
   if (action) {
     el.appendChild(h('button', {
       type: 'button',
@@ -205,9 +227,12 @@ export function toast(message, { action, timeout } = {}) {
       onClick: () => { remove(); action.onClick && action.onClick(); },
     }, action.label));
   }
+  el.addEventListener('focusin', pause);
+  el.addEventListener('pointerenter', pause);
+  el.addEventListener('focusout', () => setTimeout(arm, 0));
+  el.addEventListener('pointerleave', arm);
   region.appendChild(el);
-  const ms = timeout ?? (action ? 8000 : 3500);
-  if (ms > 0) setTimeout(remove, ms);
+  arm();
   return remove;
 }
 
@@ -291,14 +316,20 @@ export function downloadFile(filename, text, mime = 'text/plain') {
 
 // ---------- forms ----------
 
-// Grows a textarea to fit its content. Returns a function that re-measures.
-export function autosize(textarea, { min = 0 } = {}) {
+// Grows a textarea to fit its words without making the page jump. Returns the
+// function that measures it; call it once the textarea is on the page.
+export function autosize(el) {
   const fit = () => {
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.max(min, textarea.scrollHeight + 2)}px`;
+    if (!el.isConnected) return;
+    // Hold the parent's height while measuring, so the page below stays put.
+    const holder = el.parentElement;
+    holder.style.minHeight = `${holder.offsetHeight}px`;
+    el.style.height = 'auto';
+    const border = el.offsetHeight - el.clientHeight;
+    el.style.height = `${el.scrollHeight + border}px`;
+    holder.style.minHeight = '';
   };
-  textarea.addEventListener('input', fit);
-  requestAnimationFrame(fit);
+  el.addEventListener('input', fit);
   return fit;
 }
 

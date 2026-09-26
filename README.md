@@ -11,14 +11,14 @@ A prayer app for Reformed Presbyterians. It works on any phone or computer, inst
 
 **Guided prayer.** Pray through your requests by one of four patterns.
 
-- *The Lord's Prayer*, petition by petition, with the Shorter Catechism's teaching on each (Q. 99 to 107). Your requests fall under the petition they belong to.
+- *The Lord's Prayer*, petition by petition, with the Shorter Catechism's teaching on each (Q. 100 to 107). Your requests fall under the petition they belong to.
 - *ACTS*, which moves through adoration, confession, thanksgiving, and supplication.
 - *Matthew Henry's Method*, after his *A Method for Prayer* (1710).
 - *My List*, straight through today's requests.
 
 Each step has Scripture from the ESV and short prompts. Check off each request as you pray. The screen stays awake while you pray, and your place is kept if you get interrupted.
 
-**Requests.** Sort requests by category (My Soul, Family, The Church, The Lost, Missions, The Persecuted Church, Rulers & Nation, and your own). Pray for each one daily, on certain days, or in a rotation that brings up a few each day, those waiting longest first. You can attach a Scripture promise you are pleading.
+**Requests.** Sort requests by category (My Soul, Family, The Church, Friends & Neighbors, The Lost, Missions & the Nations, The Persecuted Church, Rulers & Nation, Other, and your own). Pray for each one daily, on certain days, or in a rotation that brings up a few each day, those waiting longest first. You can attach a Scripture promise you are pleading.
 
 **Ebenezer.** When the Lord answers, mark the request answered and write how. It moves to your Ebenezer, a record of "stones of help" (1 Samuel 7:12) to look back on.
 
@@ -41,9 +41,9 @@ Once the site is published (see below), open its address on your phone.
 
 The repository includes a workflow that tests the app and publishes it.
 
-1. Merge this work into `main`.
-2. In the repository on GitHub, go to **Settings**, then **Pages**, and set **Source** to **GitHub Actions**.
-3. The next push to `main` publishes the app at `https://<your-username>.github.io/beforethethrone/`.
+1. In the repository on GitHub, go to **Settings**, then **Pages**, and set **Source** to **GitHub Actions**.
+2. Merge this work into `main`. The workflow tests the app and publishes it at `https://<your-username>.github.io/beforethethrone/`. Every later push to `main` publishes again.
+3. If a run failed because Pages was not yet turned on, open the **Actions** tab, choose **Test and deploy to GitHub Pages**, and click **Run workflow**.
 
 ## Run it on a computer
 

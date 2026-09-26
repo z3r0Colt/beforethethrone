@@ -468,7 +468,8 @@ function installSection() {
         h('p', null, 'To install on iPhone or iPad, open this page in Safari. Tap the ',
           h('strong', null, 'Share'), ' button, and then choose ',
           h('strong', null, 'Add to Home Screen'), '.'),
-        h('p', { class: 'hint' }, 'Once installed, it opens like any other app and works without an internet connection.'));
+        h('p', { class: 'hint' }, 'Once installed, it opens like any other app and works without an internet connection.'),
+        h('p', { class: 'hint' }, 'In a browser tab, your iPhone or iPad may clear everything you have saved here if you do not open this app for about a week. Adding it to your Home Screen guards against this, and exporting a backup now and then keeps your prayers safe.'));
     } else {
       body.append(h('p', null, 'Your browser can add this app to your home screen or desktop from its menu. Once installed, it opens like any other app and works without an internet connection.'));
     }
@@ -495,14 +496,17 @@ function dataSection(go) {
   });
 
   function exportNow() {
-    const text = JSON.stringify(exportBackup(getState()), null, 2);
+    // Compact, so a backup made near the storage limit can still come back in.
+    const text = JSON.stringify(exportBackup(getState()));
     downloadFile(backupFilename(), text, 'application/json');
     toast('Backup saved. Keep it somewhere safe.');
   }
 
   async function importFile(file) {
     if (!file) return;
-    if (file.size > MAX_BACKUP_BYTES) {
+    // parseBackup limits characters, and one character can take three bytes in
+    // the file. Smart quotes and many languages do, so bytes get that much room.
+    if (file.size > MAX_BACKUP_BYTES * 3) {
       toast('That file is too large to be a Before the Throne backup.');
       return;
     }
