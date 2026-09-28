@@ -6,13 +6,12 @@
   "type": "module",
   "scripts": {
     "serve": "http-server -p 8080 -c-1 .",
-    "test": "node --test tests/unit/",
+    "test": "node --test \"tests/unit/*.test.js\"",
     "test:e2e": "playwright test",
     "icons": "node scripts/make-icons.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.56.1",
     "http-server": "14.1.1"
-  },
-  "license": "MIT"
+  }
 }

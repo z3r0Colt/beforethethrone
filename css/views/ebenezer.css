@@ -1,0 +1,225 @@
+/* Styles for the ebenezer view. Namespaced under .view-ebenezer. */
+
+/* ---------- the stone of help ---------- */
+
+.view-ebenezer .eb-hero {
+  padding: 1.15rem 1.2rem 1.1rem;
+  border-top: 3px solid var(--gold);
+}
+
+.view-ebenezer .eb-hero-verse .scripture-text {
+  font-size: 1.15rem;
+}
+
+.view-ebenezer .eb-hero-text {
+  margin: 0.9rem 0 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ---------- count and year filter ---------- */
+
+.view-ebenezer .ornament {
+  margin: 1.75rem 0 0.5rem;
+}
+
+.view-ebenezer .eb-count {
+  margin: 0 0 1rem;
+  font-size: 1.3rem;
+  text-align: center;
+}
+
+.view-ebenezer .eb-count:focus { outline: none; }
+.view-ebenezer .eb-count:focus-visible { outline: 3px solid var(--focus); }
+
+.view-ebenezer .eb-years {
+  /* Room for the focus ring, which the scrolling row would otherwise clip. */
+  margin: -6px -6px 0.9rem;
+  padding: 6px;
+}
+
+.view-ebenezer .eb-years .chip {
+  flex: none;
+  min-height: 44px;
+}
+
+.view-ebenezer .eb-years .chip .count { font-variant-numeric: tabular-nums; }
+
+@media (max-width: 719px) {
+  .view-ebenezer .eb-years {
+    margin-left: calc(-1rem - var(--safe-left));
+    margin-right: calc(-1rem - var(--safe-right));
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
+  }
+}
+
+/* ---------- the answered prayers ---------- */
+
+.view-ebenezer .eb-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.view-ebenezer .eb-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem 1.1rem 0.85rem;
+}
+
+/* The category reads as a small heading above the title, while the title
+   stays first for screen readers. */
+.view-ebenezer .eb-cat {
+  order: -1;
+  margin-bottom: 0.25rem;
+}
+
+.view-ebenezer .eb-title {
+  margin: 0;
+  font-size: 1.2rem;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.view-ebenezer .eb-title:focus { outline: none; }
+.view-ebenezer .eb-title:focus-visible { outline: 3px solid var(--focus); }
+
+.view-ebenezer .eb-dates {
+  overflow: hidden; /* hides the separator that starts a wrapped line */
+  margin: 0.4rem 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.view-ebenezer .eb-dates-inner {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -1.1rem;
+}
+
+.view-ebenezer .eb-part {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.view-ebenezer .eb-part::before {
+  content: "·";
+  content: "·" / "";
+  position: absolute;
+  left: 0.4rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.view-ebenezer .eb-after {
+  color: var(--gold-ink);
+  font-weight: 600;
+}
+
+.view-ebenezer .eb-note-wrap {
+  margin-top: 0.8rem;
+}
+
+.view-ebenezer .eb-note-box {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+
+.view-ebenezer .eb-note {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.075rem;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.view-ebenezer .eb-note.is-folded {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
+  line-clamp: 6;
+  overflow: hidden;
+}
+
+.view-ebenezer .eb-note-empty {
+  margin: 0;
+  font-size: 0.9rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+.view-ebenezer .eb-note-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.2rem 0 0 -0.6rem;
+}
+
+.view-ebenezer .eb-note-tools .btn {
+  padding: 0 0.6rem;
+  font-size: 0.9rem;
+}
+
+.view-ebenezer .eb-note-tools .icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.view-ebenezer .eb-actions {
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.view-ebenezer .eb-actions .btn {
+  padding: 0 0.85rem;
+  font-size: 0.95rem;
+}
+
+.view-ebenezer .eb-delete {
+  margin-left: auto;
+  margin-right: -0.5rem;
+  color: var(--danger);
+}
+
+.view-ebenezer .eb-delete:hover {
+  background: var(--surface-2);
+}
+
+@media (max-width: 400px) {
+  .view-ebenezer .eb-card { padding-left: 0.95rem; padding-right: 0.95rem; }
+  .view-ebenezer .eb-actions { gap: 0.3rem; }
+  .view-ebenezer .eb-actions .btn { padding: 0 0.6rem; font-size: 0.9rem; gap: 0.3rem; }
+  .view-ebenezer .eb-actions .icon svg { width: 18px; height: 18px; }
+}
+
+/* ---------- empty ---------- */
+
+.view-ebenezer .eb-empty {
+  margin-top: 1.25rem;
+}
+
+.view-ebenezer .eb-empty .empty-icon svg { width: 52px; height: 52px; }
+
+/* ---------- note sheet ---------- */
+
+.eb-note-sheet .eb-sheet-for {
+  margin: 0 0 0.9rem;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.eb-note-sheet .eb-note-input {
+  min-height: 9rem;
+}

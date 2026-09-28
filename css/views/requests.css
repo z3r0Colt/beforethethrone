@@ -1,0 +1,519 @@
+/* Styles for the requests view. Namespaced under .view-requests. */
+
+/* ---------- page head ---------- */
+
+.view-requests .req-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+}
+
+.view-requests .req-head .page-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.view-requests .req-head-action {
+  /* Lines the label up with the page edge, whether it sits beside the title
+     or wraps below it on a narrow phone. */
+  margin: 0 -0.6rem 0 -0.7rem;
+  padding: 0 0.7rem;
+}
+
+/* ---------- list controls ---------- */
+
+.view-requests .req-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.view-requests .req-chips {
+  /* Room for the focus ring, which the scrolling row would otherwise clip. */
+  margin: -6px;
+  padding: 6px;
+  scroll-padding-inline: 1rem;
+}
+
+.view-requests .req-chips .chip {
+  flex: none;
+  min-height: 44px;
+}
+
+.view-requests .req-chips .chip .count {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 719px) {
+  /* Let the chips run to the screen edges so it is plain they scroll. */
+  .view-requests .req-chips {
+    margin: -6px calc(-1rem - var(--safe-right)) -6px calc(-1rem - var(--safe-left));
+    padding-left: calc(1rem + var(--safe-left));
+    padding-right: calc(1rem + var(--safe-right));
+  }
+}
+
+.view-requests .req-search .input::-webkit-search-cancel-button {
+  cursor: pointer;
+}
+
+/* ---------- list ---------- */
+
+.view-requests.req-list-view {
+  padding-bottom: 4.5rem; /* room for the add button */
+}
+
+.view-requests .req-group {
+  margin: 0 0 1.5rem;
+}
+
+.view-requests .req-group-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.view-requests .req-group-count {
+  flex: none;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.view-requests .req-item {
+  align-items: flex-start;
+}
+
+.view-requests .req-item .chev {
+  align-self: center;
+}
+
+.view-requests .req-item-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.view-requests .req-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin-top: 0.15rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.view-requests .req-meta {
+  overflow: hidden; /* hides the separator that starts a wrapped line */
+  margin-top: 0.3rem;
+}
+
+.view-requests .req-meta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: -1.1rem;
+}
+
+.view-requests .req-meta-part {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.view-requests .req-meta-part::before {
+  content: "·";
+  content: "·" / "";
+  position: absolute;
+  left: 0.4rem;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.view-requests .req-ebenezer-link {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+  min-height: 56px;
+  padding: 0.85rem 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.view-requests .req-ebenezer-link:hover { background: var(--surface-2); }
+
+.view-requests .req-ebenezer-link .grow { flex: 1; min-width: 0; }
+
+.view-requests .req-ebenezer-icon { color: var(--gold); }
+
+.view-requests .req-ebenezer-title {
+  display: block;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.view-requests .req-ebenezer-link .meta {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.view-requests .req-ebenezer-link .chev { color: var(--muted); }
+.view-requests .req-ebenezer-link .chev svg { width: 20px; height: 20px; }
+
+.view-requests .req-results .empty {
+  background: var(--surface);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+
+.view-requests .req-welcome {
+  padding-bottom: 1.5rem;
+}
+
+.view-requests .req-welcome .empty {
+  padding-top: 1.5rem;
+  padding-bottom: 1.25rem;
+}
+
+.view-requests .req-welcome .empty .muted {
+  max-width: 30rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.view-requests .req-welcome-verse {
+  max-width: 30rem;
+  margin: 0.5rem auto 0;
+}
+
+/* ---------- editor ---------- */
+
+.view-requests .req-form {
+  padding: 1.15rem 1.1rem 1.1rem;
+}
+
+.view-requests .req-optional {
+  margin-left: 0.2rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.view-requests .req-form .input,
+.view-requests .req-form .textarea,
+.view-requests .req-form .select {
+  background: var(--bg);
+}
+
+.view-requests .req-title-input {
+  resize: none;
+  overflow: hidden;
+  line-height: 1.45;
+}
+
+.view-requests .req-details-input {
+  resize: none;
+  overflow: hidden;
+}
+
+.view-requests .req-freq button {
+  /* Size by label so "Certain days" gets the room it needs, and never break
+     a word in the middle when the text is large. */
+  flex: 1 1 auto;
+  min-width: min-content;
+  padding: 0.25rem 0.3rem;
+  overflow-wrap: normal;
+}
+
+.view-requests .req-freq-hint {
+  margin-top: 0.5rem;
+}
+
+.view-requests .req-days {
+  margin-top: 0.65rem;
+  container-type: inline-size;
+}
+
+.view-requests .req-wd-short { display: none; }
+
+/* On a narrow phone with large text, "Sun Mon Tue" becomes "Su Mo Tu". */
+@container (max-width: 18em) {
+  .view-requests .req-wd-long { display: none; }
+  .view-requests .req-wd-short { display: inline; }
+}
+
+.view-requests .req-days .weekday-picker button {
+  min-width: 0;
+  color: var(--ink);
+}
+
+.view-requests .req-days .weekday-picker button[aria-pressed="true"] {
+  color: var(--accent-ink);
+}
+
+.view-requests .req-promise-preview {
+  margin-top: 0.75rem;
+}
+
+.view-requests .req-promise-verse .scripture-text {
+  font-size: 1.05rem;
+}
+
+.view-requests .req-promise-link {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  color: var(--muted);
+}
+
+.view-requests .req-promise-link .ref-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+
+.view-requests .req-ext svg {
+  width: 16px;
+  height: 16px;
+}
+
+.view-requests .req-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+.view-requests .req-form-actions .btn-primary {
+  flex: 1 1 auto;
+  max-width: 12rem;
+}
+
+.view-requests .req-status-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.view-requests .req-status-note .icon { color: var(--muted); }
+.view-requests .req-status-note .icon svg { width: 20px; height: 20px; }
+
+.view-requests .req-restored {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-sm);
+  background: var(--gold-soft);
+}
+
+.view-requests .req-restored p {
+  flex: 1;
+  margin: 0;
+  font-size: 0.925rem;
+}
+
+.view-requests .req-restored-icon { flex: none; color: var(--gold); }
+.view-requests .req-restored-icon svg { width: 20px; height: 20px; }
+
+.view-requests .req-answered {
+  margin: 0 0 1rem;
+  border-left: 4px solid var(--gold);
+}
+
+.view-requests .req-answered-date {
+  margin-bottom: 0.5rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.view-requests .req-answer-note {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.view-requests .req-history {
+  margin-bottom: 1rem;
+}
+
+.view-requests .req-stats {
+  margin: 0;
+  padding: 0.25rem 1.1rem;
+}
+
+.view-requests .req-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0;
+}
+
+.view-requests .req-stat + .req-stat {
+  border-top: 1px solid var(--line);
+}
+
+.view-requests .req-stat dt {
+  flex: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.view-requests .req-stat dd {
+  margin: 0;
+  min-width: 0;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.view-requests .req-stat-block {
+  display: block;
+}
+
+.view-requests .req-stat-block dd {
+  margin-top: 0.3rem;
+  text-align: left;
+  line-height: 1.55;
+}
+
+.view-requests .req-actions {
+  margin-top: 1rem;
+}
+
+.view-requests .req-action {
+  cursor: pointer;
+}
+
+.view-requests .req-action-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.view-requests .req-action-icon svg { width: 20px; height: 20px; }
+
+.view-requests .req-action-answer .req-action-icon {
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.view-requests .req-action-delete,
+.view-requests .req-action-delete .req-action-icon {
+  color: var(--danger);
+}
+
+/* ---------- categories ---------- */
+
+.view-requests .req-cat-row {
+  padding: 0.75rem 0.75rem 0.4rem 1rem;
+}
+
+.view-requests .req-cat-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-requests .req-cat-name .input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+}
+
+.view-requests .req-cat-save {
+  flex: none;
+}
+
+.view-requests .req-cat-foot {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+}
+
+.view-requests .req-cat-foot .meta {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.view-requests .req-cat-foot .icon-btn {
+  color: var(--muted);
+}
+
+.view-requests .req-cat-foot .icon-btn:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.view-requests .req-cat-foot .icon-btn:disabled {
+  opacity: 0.35;
+}
+
+.view-requests .req-cat-foot .req-cat-delete:hover:not(:disabled),
+.view-requests .req-cat-foot .req-cat-delete:focus-visible {
+  color: var(--danger);
+}
+
+.view-requests .req-cat-last {
+  margin-top: 0.75rem;
+}
+
+.view-requests .req-cat-add-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.view-requests .req-cat-add-row .field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.view-requests .req-cat-add-row .input {
+  background: var(--bg);
+}
+
+.view-requests .req-cat-add-row .btn {
+  flex: none;
+}
+
+.view-requests .req-cat-note {
+  margin-top: -0.5rem;
+}
+
+/* ---------- sheets opened from this view ---------- */
+
+.req-answer-sheet .textarea {
+  min-height: 8rem;
+}

@@ -2,7 +2,11 @@
 // with no signal. Bump VERSION (with js/version.js) on every release.
 
 const VERSION = '1.0.0';
-const CACHE = `btt-${VERSION}`;
+// CacheStorage is shared by every app on the origin (all of a user's github.io
+// project sites), so the cache name carries this app's folder.
+const SCOPE = new URL('./', self.location).pathname;
+const PREFIX = `btt-${SCOPE}-`;
+const CACHE = `${PREFIX}${VERSION}`;
 
 const PRECACHE = [
   './',
@@ -58,7 +62,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k.startsWith('btt-') && k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

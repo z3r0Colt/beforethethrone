@@ -1,0 +1,271 @@
+/* Styles for the settings view. Namespaced under .view-settings. */
+
+/* ---------- sections and cards ---------- */
+
+.view-settings .settings-section { margin: 1.5rem 0; }
+
+.view-settings .settings-card { padding-top: 0.35rem; padding-bottom: 0.35rem; }
+
+/* Each card is a column of rows divided by hairlines, like a ledger. */
+.view-settings .settings-item { padding: 0.9rem 0; }
+
+.view-settings .settings-item + .settings-item { border-top: 1px solid var(--line); }
+
+.view-settings .settings-item > .field,
+.view-settings .settings-item > .toggle-row,
+.view-settings .settings-item > .field:last-child { margin-bottom: 0; }
+
+.view-settings .settings-item > p:last-child,
+.view-settings .settings-item > .hint:last-child { margin-bottom: 0; }
+
+.view-settings .settings-item .toggle-row .hint { margin-top: 0.1rem; }
+
+/* Never break a word inside a segment. At larger text on a narrow phone the
+   buttons grow to fit their longest word and wrap to a second line if needed. */
+.view-settings .settings-seg .seg {
+  flex-wrap: wrap;
+  margin-top: 0.1rem;
+}
+
+.view-settings .settings-seg .seg button {
+  min-width: min-content;
+  overflow-wrap: normal;
+}
+
+/* The four ways to pray sit two by two when the card is narrow for the text
+   size, rather than leaving one button alone on a second row. */
+.view-settings .settings-seg { container-type: inline-size; }
+
+@container (max-width: 16em) {
+  .view-settings .settings-seg-method .seg button { flex: 1 1 calc(50% - 2px); }
+}
+
+.view-settings .settings-seg .hint { min-height: 1.3em; }
+
+/* ---------- rotation stepper ---------- */
+
+.view-settings .settings-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.view-settings .settings-step {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--accent);
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.view-settings .settings-step:hover:not(:disabled) { background: var(--surface-2); }
+
+.view-settings .settings-step .icon svg { width: 20px; height: 20px; }
+
+.view-settings .settings-number {
+  width: 4.75rem;
+  text-align: center;
+  font-size: 1.125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.view-settings .settings-number::-webkit-inner-spin-button,
+.view-settings .settings-number::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* ---------- reminder times ---------- */
+
+.view-settings .settings-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.view-settings .settings-fieldset legend { padding: 0; }
+
+.view-settings .settings-times {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.15rem 0 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.view-settings .settings-time-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.view-settings .settings-time-icon { color: var(--gold); }
+
+.view-settings .settings-time-icon svg { width: 20px; height: 20px; }
+
+.view-settings .settings-time-input {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  max-width: 13rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.view-settings .settings-time-remove { color: var(--muted); }
+
+.view-settings .settings-time-remove:hover { color: var(--danger); }
+
+.view-settings .settings-time-remove .icon svg { width: 20px; height: 20px; }
+
+.view-settings .settings-times-empty { margin: 0.15rem 0 0.75rem; }
+
+.view-settings .settings-add-row { display: flex; }
+
+.view-settings .settings-add-time { padding-left: 0.8rem; }
+
+.view-settings .settings-fieldset .error-text { margin: -0.35rem 0 0.75rem; }
+
+.view-settings .settings-calendar {
+  margin-bottom: 0.5rem;
+  text-align: center;
+}
+
+.view-settings .settings-stale {
+  margin: 0 0 0.75rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--gold-soft);
+  color: var(--ink);
+  font-size: 0.9rem;
+}
+
+/* ---------- notes, buttons, and the data card ---------- */
+
+.view-settings .settings-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  margin: 0;
+}
+
+.view-settings .settings-note-icon {
+  margin-top: 0.05rem;
+  color: var(--success);
+}
+
+.view-settings .settings-note-icon svg { width: 22px; height: 22px; }
+
+.view-settings .settings-summary { margin: 0.5rem 0 0 calc(22px + 0.6rem); }
+
+.view-settings .settings-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.view-settings .settings-buttons .btn { flex: 1 1 10rem; }
+
+.view-settings .settings-install p { margin-bottom: 0.75rem; }
+
+.view-settings .settings-install p:last-child { margin-bottom: 0; }
+
+.view-settings .settings-install .hint { margin-top: 0; }
+
+.view-settings .settings-links .settings-link-icon { color: var(--gold); }
+
+/* ---------- About ---------- */
+
+.view-settings .about-hero {
+  margin: 0.5rem 0 1.5rem;
+  text-align: center;
+}
+
+.view-settings .about-mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 0.85rem;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+
+.view-settings .about-hero .page-title { font-size: 2rem; }
+
+.view-settings .about-hero .page-subtitle {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.view-settings .about-verse {
+  margin: 0 0 0.5rem;
+  padding: 1.1rem 1.1rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.view-settings .about-section { margin: 1.75rem 0; }
+
+.view-settings .about-heading {
+  margin-bottom: 0.6rem;
+  font-size: 1.3rem;
+}
+
+.view-settings .about-prose p {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+  line-height: 1.65;
+}
+
+.view-settings .about-sources p,
+.view-settings .about-works {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.view-settings .about-works {
+  margin: -0.35rem 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.view-settings .about-works li + li { margin-top: 0.2rem; }
+
+.view-settings .about-sources cite,
+.view-settings .about-works cite { font-style: italic; }
+
+.view-settings .about-notice {
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--line);
+}
+
+.view-settings-about .ornament { margin-top: 2rem; }
+
+.view-settings .about-sdg {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 1.5rem;
+  font-style: italic;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.view-settings .about-sdg-en {
+  margin-top: 0.2rem;
+  text-align: center;
+}
+
+/* ---------- wider screens ---------- */
+
+@media (min-width: 560px) {
+  .view-settings .settings-buttons .btn { flex: 0 1 auto; }
+  .view-settings .settings-calendar { display: inline-flex; width: auto; }
+}

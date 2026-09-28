@@ -1,9 +1,9 @@
 // Boots the app: applies appearance, wires navigation, registers the service
 // worker, and keeps an eye on storage and updates.
 
-import { defineRoutes, start, render as rerender } from './router.js';
-import { getState, subscribe, reload, STORAGE_KEY } from './store.js';
-import { icon, toast } from './dom.js';
+import { defineRoutes, start, render as rerender, hasUnsavedInput } from './router.js';
+import { getState, subscribe, reload, forgetLocalCopies, STORAGE_KEY } from './store.js';
+import { icon, toast, closeAllSheets } from './dom.js';
 import { initInstall } from './install.js';
 import { APP_VERSION } from './version.js';
 
@@ -67,6 +67,7 @@ function fillIcons() {
 }
 
 function onRoute({ route }) {
+  closeAllSheets();
   document.body.classList.toggle('focus-mode', !!route.focus);
   document.querySelectorAll('[data-nav]').forEach((a) => {
     if (a.dataset.nav === route.tab) a.setAttribute('aria-current', 'page');
@@ -86,23 +87,45 @@ function wireSkipLink(main) {
   });
 }
 
+// A re-render rebuilds the page from saved state, so it waits while the user
+// has words in an open sheet or unsaved changes in a form.
+function safeToRerender() {
+  return !document.querySelector('dialog[open]') && !hasUnsavedInput();
+}
+
 function watchStorage() {
   let stale = false;
   window.addEventListener('storage', (e) => {
     if (e.key !== STORAGE_KEY) return;
     reload();
+    if (e.newValue === null) {
+      // Everything was erased in another tab. Leave the current page (its
+      // cleanup may save a draft), then remove whatever this tab still keeps.
+      // Blurring first lets a field's change event fire now, before cleanup,
+      // rather than when the field is removed and a late draft is written.
+      stale = false;
+      const active = document.activeElement;
+      if (active && active !== document.body && typeof active.blur === 'function') active.blur();
+      history.replaceState(null, '', '#/today');
+      const done = rerender();
+      forgetLocalCopies();
+      Promise.resolve(done).finally(forgetLocalCopies);
+      return;
+    }
     // Re-render now only if this tab is hidden, so typing is never lost.
-    if (document.hidden) rerender();
+    if (document.hidden && safeToRerender()) rerender();
     else stale = true;
   });
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && stale) {
+    if (!document.hidden && stale && safeToRerender()) {
       stale = false;
       rerender();
     }
   });
   let lastWarned = 0;
-  window.addEventListener('btt:storage-error', () => {
+  window.addEventListener('btt:storage-error', (e) => {
+    // A page that explains a failed save itself needs no second message.
+    if (e.detail && e.detail.reported) return;
     const now = Date.now();
     if (now - lastWarned < 30000) return;
     lastWarned = now;
@@ -112,21 +135,35 @@ function watchStorage() {
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
-  const hadController = !!navigator.serviceWorker.controller;
+  let hadController = !!navigator.serviceWorker.controller;
   let refreshing = false;
+  let reloadRequested = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || refreshing) return;
+    if (refreshing) return;
+    // The first install taking charge of this page is not an update. Any later
+    // change is, and so is the one the user asked for with Reload.
+    if (!hadController && !reloadRequested) {
+      hadController = true;
+      return;
+    }
     refreshing = true;
     window.location.reload();
   });
   const promptUpdate = (worker) => {
     toast('A new version is ready.', {
       timeout: 0,
-      action: { label: 'Reload', onClick: () => worker.postMessage({ type: 'SKIP_WAITING' }) },
+      action: {
+        label: 'Reload',
+        onClick: () => {
+          reloadRequested = true;
+          worker.postMessage({ type: 'SKIP_WAITING' });
+        },
+      },
     });
   };
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').then((reg) => {
+      if (!reg) return;
       if (reg.waiting && navigator.serviceWorker.controller) promptUpdate(reg.waiting);
       reg.addEventListener('updatefound', () => {
         const worker = reg.installing;

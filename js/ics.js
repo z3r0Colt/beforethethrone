@@ -42,8 +42,14 @@ export function foldLine(line) {
   return out.join('\r\n');
 }
 
-function floating(date) {
-  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+// A floating local date-time. The clock digits come from the requested time,
+// not from the Date, because a time in the spring-forward gap (like 02:30)
+// rolls to the next hour in a Date and would stay an hour late every day.
+function floating(date, time) {
+  const t = parseTime(time);
+  const hh = t ? t.h : date.getHours();
+  const mm = t ? t.m : date.getMinutes();
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(hh)}${pad(mm)}00`;
 }
 
 function utcStamp(date) {
@@ -68,12 +74,12 @@ export function nextOccurrence(time, now = new Date(), weekday = null) {
   return d;
 }
 
-function event({ uid, stamp, start, rrule, summary, description, url }) {
+function event({ uid, stamp, start, time, rrule, summary, description, url }) {
   return [
     'BEGIN:VEVENT',
     `UID:${uid}`,
     `DTSTAMP:${stamp}`,
-    `DTSTART:${floating(start)}`,
+    `DTSTART:${floating(start, time)}`,
     'DURATION:PT15M',
     rrule,
     `SUMMARY:${escapeText(summary)}`,
@@ -108,6 +114,7 @@ export function buildReminderICS({ times = [], lordsDayReminder = false, appUrl 
       uid: `${i + 1}-${base}@beforethethrone`,
       stamp,
       start: nextOccurrence(t, now),
+      time: t,
       rrule: 'RRULE:FREQ=DAILY',
       summary: 'Time for prayer',
       description,
@@ -119,6 +126,7 @@ export function buildReminderICS({ times = [], lordsDayReminder = false, appUrl 
       uid: `lordsday-${base}@beforethethrone`,
       stamp,
       start: nextOccurrence('19:30', now, 6),
+      time: '19:30',
       rrule: 'RRULE:FREQ=WEEKLY;BYDAY=SA',
       summary: 'Prepare for the Lord’s Day',
       description: url

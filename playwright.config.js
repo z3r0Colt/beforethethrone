@@ -1,6 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'node:fs';
 
+// Lets context.route() see the service worker's own fetches, so the offline
+// test is truly offline for the worker too.
+process.env.PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS = '1';
+
 // Use the pre-installed Chromium when present (the cloud dev container);
 // otherwise Playwright's own download is used.
 const localChromium = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';

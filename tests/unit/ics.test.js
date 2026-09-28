@@ -5,7 +5,7 @@ import { buildReminderICS, foldLine, escapeText, nextOccurrence } from '../../js
 const now = new Date(2026, 8, 26, 8, 0); // Saturday 8:00 local
 
 test('escapeText escapes RFC 5545 specials', () => {
-  assert.equal(escapeText('a,b;c\\d\ne'), 'a\\,b\;c\\\\d\\ne');
+  assert.equal(escapeText('a,b;c\\d\ne'), 'a\\,b\\;c\\\\d\\ne');
 });
 
 test('foldLine keeps physical lines within 75 octets and never splits a character', () => {
